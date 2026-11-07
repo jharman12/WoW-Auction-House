@@ -11,6 +11,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -95,6 +96,7 @@ class Transaction(Base):
         ),
         CheckConstraint("quantity > 0", name="ck_transactions_quantity_positive"),
         CheckConstraint("unit_price > 0 AND total_price > 0", name="ck_transactions_price_positive"),
+        UniqueConstraint("listing_id", name="uq_transactions_listing_id"),
         Index("ix_transactions_created_at", "created_at"),
     )
 

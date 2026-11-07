@@ -1,12 +1,14 @@
 import json
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app import create_app
-from config import Settings
-from database.connection import make_engine
-from database.models import Listing
+from config import PROJECT_ROOT, Settings
+from database.connection import make_engine, make_session_factory
+from database.models import Listing, Transaction
+from services.catalog_service import load_item_catalog
+from services.listing_service import create_player_listing
 
 
 def _callback_targets(app, callback_key: str) -> dict[str, str] | list[dict[str, str]]:
@@ -115,6 +117,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     mutation_inputs = {
         ("create-listing", "n_clicks"): 1,
         ('{"listing_id":["ALL"],"type":"cancel-listing"}', "n_clicks"): [],
+        ("purchase-confirmation", "submit_n_clicks"): 0,
     }
     mutation_states = {
         ("url", "pathname"): "/player/mira-coppervale",
@@ -122,6 +125,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
         ("listing-quantity", "value"): 2,
         ("listing-price", "value"): 12.5,
         ("listing-refresh-token", "data"): 0,
+        ("purchase-listing-id", "data"): None,
     }
 
     created = _run_callback(client, app, mutation_key, mutation_inputs, mutation_states, ["create-listing.n_clicks"])
@@ -166,7 +170,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
         app,
         details_key,
         {(details_input_id, "n_clicks"): [1]},
-        {},
+        {("url", "pathname"): "/player/mira-coppervale"},
         [json.dumps({"type": "inspect-listing", "listing_id": listing_id}, separators=(",", ":")) + ".n_clicks"],
     )
     assert listing_details.status_code == 200
@@ -199,12 +203,69 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
 
     with engine.connect() as connection:
         npc_listing_id = connection.execute(
-            select(Listing.id).where(Listing.owner_type == "NPC").limit(1)
+            select(Listing.id)
+            .where(Listing.owner_type == "NPC", Listing.status == "ACTIVE")
+            .limit(1)
         ).scalar_one()
+
+    npc_details = _run_callback(
+        client,
+        app,
+        details_key,
+        {(details_input_id, "n_clicks"): [1]},
+        {("url", "pathname"): "/player/mira-coppervale"},
+        [json.dumps({"type": "inspect-listing", "listing_id": npc_listing_id}, separators=(",", ":")) + ".n_clicks"],
+    )
+    assert npc_details.status_code == 200
+    assert "Record purchase" in npc_details.get_data(as_text=True)
+
+    purchase_request_key = next(key for key in app.callback_map if "purchase-confirmation.displayed" in key)
+    purchase_input_id = '{"listing_id":["ALL"],"type":"purchase-listing"}'
+    confirmation = _run_callback(
+        client,
+        app,
+        purchase_request_key,
+        {(purchase_input_id, "n_clicks"): [1]},
+        {("url", "pathname"): "/player/mira-coppervale"},
+        [json.dumps({"type": "purchase-listing", "listing_id": npc_listing_id}, separators=(",", ":")) + ".n_clicks"],
+    )
+    assert confirmation.status_code == 200
+    assert "No app-managed gold" in confirmation.get_data(as_text=True)
+    purchase_id = confirmation.get_json()["response"]["purchase-listing-id"]["data"]
+
     mutation_inputs[("create-listing", "n_clicks")] = 0
+    mutation_inputs[(cancel_input_id, "n_clicks")] = []
+    mutation_inputs[("purchase-confirmation", "submit_n_clicks")] = 1
+    mutation_states[("listing-refresh-token", "data")] = 2
+    mutation_states[("purchase-listing-id", "data")] = purchase_id
+    purchase_recorded = _run_callback(
+        client,
+        app,
+        mutation_key,
+        mutation_inputs,
+        mutation_states,
+        ["purchase-confirmation.submit_n_clicks"],
+    )
+    assert purchase_recorded.status_code == 200
+    assert "No app-managed gold was deducted" in purchase_recorded.get_data(as_text=True)
+
+    with engine.connect() as connection:
+        purchased_listing_status = connection.execute(
+            select(Listing.status).where(Listing.id == npc_listing_id)
+        ).scalar_one()
+        purchase_count = connection.execute(select(func.count()).select_from(Listing).where(Listing.status == "SOLD")).scalar_one()
+    assert purchased_listing_status == "SOLD"
+    assert purchase_count == 1
+
+    with engine.connect() as connection:
+        npc_listing_id = connection.execute(
+            select(Listing.id)
+            .where(Listing.owner_type == "NPC", Listing.status == "ACTIVE")
+            .limit(1)
+        ).scalar_one()
     mutation_inputs[(cancel_input_id, "n_clicks")] = [1]
     mutation_states[("url", "pathname")] = "/dm"
-    mutation_states[("listing-refresh-token", "data")] = 2
+    mutation_states[("listing-refresh-token", "data")] = 3
     dm_cancellation = _run_callback(
         client,
         app,
@@ -215,4 +276,98 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     )
     assert dm_cancellation.status_code == 200
     assert "Listing cancelled." in dm_cancellation.get_data(as_text=True)
+    engine.dispose()
+
+
+def test_new_cancel_button_with_zero_clicks_does_not_cancel_player_listing(tmp_path: Path) -> None:
+    database_path = tmp_path / "auction_house.db"
+    settings = Settings(database_path=database_path, log_path=tmp_path / "app.log")
+    app = create_app(settings)
+    client = app.server.test_client()
+    engine = make_engine(database_path)
+    session_factory = make_session_factory(engine)
+    item_catalog = load_item_catalog(
+        PROJECT_ROOT / "data" / "item_catalog.json",
+        PROJECT_ROOT / "assets" / "images" / "items",
+    )
+    listing_id = create_player_listing(
+        session_factory,
+        {item.id: item for item in item_catalog},
+        "mira-coppervale",
+        "redleaf-tonic",
+        1,
+        10,
+        14,
+    )
+    callback_key = next(key for key in app.callback_map if "listing-feedback.children" in key)
+    cancel_input_id = '{"listing_id":["ALL"],"type":"cancel-listing"}'
+    trigger_id = json.dumps({"type": "cancel-listing", "listing_id": listing_id}, separators=(",", ":"))
+
+    response = _run_callback(
+        client,
+        app,
+        callback_key,
+        {
+            ("create-listing", "n_clicks"): 0,
+            (cancel_input_id, "n_clicks"): [0],
+            ("purchase-confirmation", "submit_n_clicks"): 0,
+        },
+        {
+            ("url", "pathname"): "/player/mira-coppervale",
+            ("listing-item", "value"): "redleaf-tonic",
+            ("listing-quantity", "value"): 1,
+            ("listing-price", "value"): 10,
+            ("listing-refresh-token", "data"): 0,
+            ("purchase-listing-id", "data"): None,
+        },
+        [f"{trigger_id}.n_clicks"],
+    )
+
+    assert response.status_code in {200, 204}
+    with session_factory() as session:
+        assert session.get(Listing, listing_id).status == "ACTIVE"
+    engine.dispose()
+
+
+def test_new_purchase_confirmation_with_zero_clicks_does_not_buy_listing(tmp_path: Path) -> None:
+    database_path = tmp_path / "auction_house.db"
+    settings = Settings(database_path=database_path, log_path=tmp_path / "app.log")
+    app = create_app(settings)
+    client = app.server.test_client()
+    engine = make_engine(database_path)
+    session_factory = make_session_factory(engine)
+    with session_factory() as session:
+        listing_id = session.scalar(
+            select(Listing.id)
+            .where(Listing.owner_type == "NPC", Listing.status == "ACTIVE")
+            .limit(1)
+        )
+    assert listing_id is not None
+
+    callback_key = next(key for key in app.callback_map if "listing-feedback.children" in key)
+    cancel_input_id = '{"listing_id":["ALL"],"type":"cancel-listing"}'
+    response = _run_callback(
+        client,
+        app,
+        callback_key,
+        {
+            ("create-listing", "n_clicks"): 0,
+            (cancel_input_id, "n_clicks"): [],
+            ("purchase-confirmation", "submit_n_clicks"): 0,
+        },
+        {
+            ("url", "pathname"): "/player/mira-coppervale",
+            ("listing-item", "value"): "redleaf-tonic",
+            ("listing-quantity", "value"): 1,
+            ("listing-price", "value"): 10,
+            ("listing-refresh-token", "data"): 0,
+            ("purchase-listing-id", "data"): listing_id,
+        },
+        ["purchase-confirmation.submit_n_clicks"],
+    )
+
+    assert response.status_code in {200, 204}
+    with session_factory() as session:
+        assert session.get(Listing, listing_id).status == "ACTIVE"
+        assert session.scalar(select(func.count(Transaction.id))) == 0
     engine.dispose()

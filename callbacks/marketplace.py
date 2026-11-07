@@ -8,6 +8,13 @@ from dash import ALL, Dash, Input, Output, State, ctx, html, no_update
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import Settings
+from services.auction_service import (
+    BuyerContext,
+    InvalidBuyerError,
+    purchase_listing,
+    get_character_sales,
+    get_recent_transactions,
+)
 from services.catalog_service import CatalogItem
 from services.listing_service import (
     ListingError,
@@ -21,6 +28,12 @@ from services.listing_service import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def _has_positive_click(value: int | float | list[int] | None) -> bool:
+    if isinstance(value, (list, tuple)):
+        return any(isinstance(click_count, (int, float)) and not isinstance(click_count, bool) and click_count > 0 for click_count in value)
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
 
 
 def _format_price(price: Decimal) -> str:
@@ -119,7 +132,7 @@ def _listing_row(listing: ListingView, can_inspect: bool, can_cancel: bool) -> h
     )
 
 
-def _listing_details(listing: ListingView | None) -> html.Div:
+def _listing_details(listing: ListingView | None, can_purchase: bool = False) -> html.Div:
     if listing is None:
         return html.Div(
             [html.P("Select a listing to inspect it.", className="detail-empty")],
@@ -152,11 +165,61 @@ def _listing_details(listing: ListingView | None) -> html.Div:
                         className="detail-facts",
                     ),
                     html.Div(properties, className="property-list") if properties else None,
+                    html.Div(
+                        [
+                            html.Button(
+                                "Record purchase",
+                                id={"type": "purchase-listing", "listing_id": listing.id},
+                                n_clicks=0,
+                                className="action-button",
+                            ),
+                            html.P(
+                                "No app-managed gold is charged or stored.",
+                                className="purchase-note",
+                            ),
+                        ],
+                        className="purchase-action",
+                    )
+                    if can_purchase
+                    else None,
                 ],
                 className="detail-copy",
             ),
         ],
         className="listing-detail-content",
+    )
+
+
+def _transaction_row(transaction, player_ledger: bool) -> html.Article:
+    if player_ledger:
+        summary = (
+            f"Sold {transaction.quantity} × {transaction.item_name} to {transaction.buyer_name} "
+            f"for {_format_price(transaction.total_price)} gp. "
+            f"Add {_format_price(transaction.player_sale_proceeds or Decimal('0'))} gp manually to D&D Beyond."
+        )
+        label = "PLAYER SALE"
+    else:
+        summary = (
+            f"{transaction.seller_type} · {transaction.seller_name} → "
+            f"{transaction.buyer_type} · {transaction.buyer_name} · "
+            f"{transaction.quantity} × {transaction.item_name} · {_format_price(transaction.total_price)} gp"
+        )
+        label = "TRANSACTION"
+
+    return html.Article(
+        [
+            html.Span(label, className="transaction-kind"),
+            html.P(summary, className="transaction-summary"),
+            html.Time(
+                    (
+                        transaction.created_at.replace(tzinfo=UTC)
+                        if transaction.created_at.tzinfo is None
+                        else transaction.created_at.astimezone(UTC)
+                    ).astimezone().strftime("%b %d, %Y %H:%M"),
+                className="transaction-time",
+            ),
+        ],
+        className="transaction-row",
     )
 
 
@@ -178,6 +241,7 @@ def register_marketplace_callbacks(
         Output("market-count", "children"),
         Output("market-page-label", "children"),
         Output("listing-page", "data"),
+        Output("transaction-history", "children"),
         Input("market-search", "value"),
         Input("market-category", "value"),
         Input("market-rarity", "value"),
@@ -252,6 +316,24 @@ def register_marketplace_callbacks(
                 else _empty_listings("There are no active listings to manage.")
             )
 
+        if pathname and pathname.startswith("/player/"):
+            character_id = unquote(pathname.removeprefix("/player/"))
+            transactions = get_character_sales(session_factory, items_by_id, character_id)
+            transaction_content = (
+                [_transaction_row(transaction, player_ledger=True) for transaction in transactions]
+                if transactions
+                else _empty_listings("Completed sales for this character will appear here.")
+            )
+        elif pathname == "/dm":
+            transactions = get_recent_transactions(session_factory, items_by_id)
+            transaction_content = (
+                [_transaction_row(transaction, player_ledger=False) for transaction in transactions]
+                if transactions
+                else _empty_listings("Completed purchases will appear in the ledger.")
+            )
+        else:
+            transaction_content = []
+
         count_label = f"{results.total_count} active listing{'s' if results.total_count != 1 else ''}"
         if results.truncated:
             count_label += " · first 5,000 shown"
@@ -261,6 +343,7 @@ def register_marketplace_callbacks(
             count_label,
             f"Page {page} of {total_pages}",
             page,
+            transaction_content,
         )
 
     @app.callback(
@@ -288,25 +371,48 @@ def register_marketplace_callbacks(
         Output("listing-refresh-token", "data"),
         Input("create-listing", "n_clicks"),
         Input({"type": "cancel-listing", "listing_id": ALL}, "n_clicks"),
+        Input("purchase-confirmation", "submit_n_clicks"),
         State("url", "pathname"),
         State("listing-item", "value"),
         State("listing-quantity", "value"),
         State("listing-price", "value"),
         State("listing-refresh-token", "data"),
+        State("purchase-listing-id", "data"),
         prevent_initial_call=True,
     )
     def mutate_listings(
         _create_clicks: int,
         _cancel_clicks: list[int],
+        _purchase_clicks: int,
         pathname: str | None,
         item_id: str | None,
         quantity: int | float | None,
         asking_price: int | float | None,
         refresh_token: int | None,
+        purchase_listing_id: int | None,
     ):
         try:
             triggered_id = ctx.triggered_id
+            if triggered_id == "purchase-confirmation":
+                if not _has_positive_click(_purchase_clicks):
+                    return no_update, no_update
+                if not pathname or not pathname.startswith("/player/") or purchase_listing_id is None:
+                    return "Select a listing from the player marketplace to purchase it.", no_update
+                character_id = unquote(pathname.removeprefix("/player/"))
+                transaction = purchase_listing(
+                    session_factory,
+                    purchase_listing_id,
+                    BuyerContext(buyer_type="PLAYER", character_id=character_id),
+                )
+                return (
+                    f"Purchase recorded for {_format_price(transaction.total_price)} gp. "
+                    "No app-managed gold was deducted.",
+                    (refresh_token or 0) + 1,
+                )
+
             if triggered_id == "create-listing":
+                if not _has_positive_click(_create_clicks):
+                    return no_update, no_update
                 if not pathname or not pathname.startswith("/player/"):
                     return "Select a campaign character before creating a listing.", no_update
                 character_id = unquote(pathname.removeprefix("/player/"))
@@ -327,6 +433,8 @@ def register_marketplace_callbacks(
                 return "Listing posted to the shared market.", (refresh_token or 0) + 1
 
             if isinstance(triggered_id, dict) and triggered_id.get("type") == "cancel-listing":
+                if not _has_positive_click(_cancel_clicks):
+                    return no_update, no_update
                 if pathname == "/dm":
                     cancel_listing(
                         session_factory,
@@ -355,9 +463,12 @@ def register_marketplace_callbacks(
     @app.callback(
         Output("listing-details", "children"),
         Input({"type": "inspect-listing", "listing_id": ALL}, "n_clicks"),
+        State("url", "pathname"),
         prevent_initial_call=True,
     )
-    def inspect_listing(_clicks: list[int]):
+    def inspect_listing(_clicks: list[int], pathname: str | None):
+        if not _has_positive_click(_clicks):
+            return no_update
         triggered_id = ctx.triggered_id
         if not isinstance(triggered_id, dict) or triggered_id.get("type") != "inspect-listing":
             return no_update
@@ -366,4 +477,37 @@ def register_marketplace_callbacks(
             items_by_id,
             int(triggered_id["listing_id"]),
         )
-        return _listing_details(listing)
+        can_purchase = bool(
+            listing is not None
+            and listing.owner_type == "NPC"
+            and pathname
+            and pathname.startswith("/player/")
+        )
+        return _listing_details(listing, can_purchase=can_purchase)
+
+    @app.callback(
+        Output("purchase-confirmation", "displayed"),
+        Output("purchase-listing-id", "data"),
+        Output("purchase-confirmation", "message"),
+        Input({"type": "purchase-listing", "listing_id": ALL}, "n_clicks"),
+        State("url", "pathname"),
+        prevent_initial_call=True,
+    )
+    def request_purchase(_clicks: list[int], pathname: str | None):
+        if not _has_positive_click(_clicks):
+            return no_update, no_update, no_update
+        triggered_id = ctx.triggered_id
+        if not isinstance(triggered_id, dict) or triggered_id.get("type") != "purchase-listing":
+            return no_update, no_update, no_update
+        if not pathname or not pathname.startswith("/player/"):
+            return False, no_update, "Purchases can only be recorded from a player marketplace."
+
+        listing = get_listing_view(session_factory, items_by_id, int(triggered_id["listing_id"]))
+        if listing is None or listing.owner_type != "NPC":
+            return False, no_update, "This NPC listing is no longer available."
+        total_price = listing.asking_price * listing.quantity
+        message = (
+            f"Record purchase of {listing.quantity} x {listing.item.name} from {listing.owner_name} "
+            f"for {_format_price(total_price)} gp? No app-managed gold will be deducted or stored."
+        )
+        return True, listing.id, message

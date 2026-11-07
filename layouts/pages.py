@@ -168,6 +168,8 @@ def _marketplace_workspace(
             dcc.Interval(id="market-poll", interval=poll_interval_ms, n_intervals=0),
             dcc.Store(id="listing-refresh-token", data=0),
             dcc.Store(id="listing-page", data=1),
+            dcc.Store(id="purchase-listing-id"),
+            dcc.ConfirmDialog(id="purchase-confirmation", displayed=False),
             listing_form,
             html.P(id="listing-feedback", className="listing-feedback", role="status"),
             html.Section(
@@ -256,6 +258,19 @@ def _marketplace_workspace(
                     html.Div("Loading...", id="owner-listings", className="listing-stack owner-listings"),
                 ],
                 className="owner-listings-section",
+            ),
+            html.Section(
+                [
+                    html.Div(
+                        [
+                            html.P("PLAYER SALE LEDGER" if show_listing_form else "TRANSACTION LEDGER", className="eyebrow"),
+                            html.H2("Completed sales" if show_listing_form else "Recent transactions"),
+                        ],
+                        className="section-heading",
+                    ),
+                    html.Div(id="transaction-history", className="transaction-stack"),
+                ],
+                className="transaction-history-section",
             ),
         ],
         className="marketplace-workspace",

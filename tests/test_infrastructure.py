@@ -45,6 +45,8 @@ def test_app_runs_migrations_and_preserves_database(tmp_path: Path) -> None:
         table_names = set(inspect(engine).get_table_names())
         assert {"characters", "npcs", "listings", "transactions", "settings"} <= table_names
         assert "player_gold" not in table_names
+        transaction_constraints = inspect(engine).get_unique_constraints("transactions")
+        assert any(constraint["column_names"] == ["listing_id"] for constraint in transaction_constraints)
         session_factory = make_session_factory(engine)
         with session_factory() as session:
             assert session.get(Character, "test-character").name == "Test Character"
