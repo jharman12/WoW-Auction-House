@@ -1,0 +1,41 @@
+:root {
+    color-scheme: dark;
+    font-family: Georgia, "Times New Roman", serif;
+    background: #171a1a;
+    color: #eee8d7;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background: radial-gradient(ellipse at 50% 0%, #30332d 0, #1d211e 42%, #121515 100%);
+}
+
+.page-shell {
+    display: grid;
+    min-height: 100vh;
+    align-content: center;
+    justify-items: center;
+    padding: 32px 20px;
+    text-align: center;
+}
+
+.eyebrow {
+    margin: 0 0 12px;
+    color: #c9a45b;
+    font: 700 12px/1.4 Arial, sans-serif;
+    letter-spacing: 0.12em;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(36px, 8vw, 64px);
+    font-weight: 500;
+}
+
+.status {
+    margin-top: 20px;
+    color: #b6b9ae;
+    font: 15px/1.5 Arial, sans-serif;
+}
