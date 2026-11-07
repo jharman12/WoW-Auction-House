@@ -1,4 +1,5 @@
 from pathlib import Path
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -25,6 +26,12 @@ class Settings(BaseSettings):
     max_price_change_percent: float = Field(default=10.0, gt=0, le=100)
     economy_update_interval_minutes: int = Field(default=60, ge=1)
     market_history_interval_minutes: int = Field(default=60, ge=1)
+    economy_target_supply_quantity: int = Field(default=10, ge=1)
+    economy_target_demand_quantity: int = Field(default=5, ge=1)
+    economy_demand_window_hours: int = Field(default=168, ge=1)
+    economy_smoothing_factor: Decimal = Field(default=Decimal("0.5"), ge=0, le=1)
+    economy_minimum_price_gp: Decimal = Field(default=Decimal("1"), gt=0)
+    economy_price_rounding_increment: Decimal = Field(default=Decimal("1"), gt=0)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_path: Path = PROJECT_ROOT / "logs" / "auction_house.log"
 
@@ -32,4 +39,6 @@ class Settings(BaseSettings):
     def validate_price_bounds(self) -> "Settings":
         if self.minimum_price_multiplier > self.maximum_price_multiplier:
             raise ValueError("minimum_price_multiplier cannot exceed maximum_price_multiplier")
+        if self.economy_smoothing_factor < 0 or self.economy_smoothing_factor > 1:
+            raise ValueError("economy_smoothing_factor must be between 0 and 1")
         return self

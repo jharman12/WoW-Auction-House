@@ -163,6 +163,52 @@ def _marketplace_workspace(
             className="listing-composer" if show_listing_form else "listing-composer visually-hidden",
         )
 
+    economy_panel = (
+        html.Section(
+            [
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.P("ECONOMY ENGINE", className="eyebrow"),
+                                html.H2("Market prices"),
+                            ],
+                            className="section-heading",
+                        ),
+                        html.Button(
+                            "Recalculate prices",
+                            id="market-update-prices",
+                            n_clicks=0,
+                            className="action-button",
+                        ),
+                    ],
+                    className="market-heading-row economy-heading",
+                ),
+                html.P(
+                    "Prices respond to active supply and recent purchases. Player asking prices remain independent.",
+                    className="economy-caption",
+                ),
+                dcc.Dropdown(
+                    id="market-history-item",
+                    options=[{"label": item.name, "value": item.id} for item in enabled_items],
+                    value=enabled_items[0].id if enabled_items else None,
+                    clearable=False,
+                    className="market-dropdown economy-item-select",
+                ),
+                dcc.Graph(
+                    id="market-price-chart",
+                    config={"displayModeBar": False, "responsive": True},
+                    className="market-price-chart",
+                ),
+                html.Div(id="market-price-table", className="market-price-table"),
+                html.P(id="market-update-feedback", className="listing-feedback", role="status"),
+            ],
+            className="economy-panel",
+        )
+        if not show_listing_form
+        else None
+    )
+
     return html.Div(
         [
             dcc.Interval(id="market-poll", interval=poll_interval_ms, n_intervals=0),
@@ -170,6 +216,7 @@ def _marketplace_workspace(
             dcc.Store(id="listing-page", data=1),
             dcc.Store(id="purchase-listing-id"),
             dcc.ConfirmDialog(id="purchase-confirmation", displayed=False),
+            economy_panel,
             listing_form,
             html.P(id="listing-feedback", className="listing-feedback", role="status"),
             html.Section(

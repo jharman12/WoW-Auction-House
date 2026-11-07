@@ -9,8 +9,10 @@ from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
 from layouts.pages import landing_page
 from logging_config import configure_logging
+from scheduler.jobs import create_economy_scheduler
 from services.catalog_service import load_characters, load_item_catalog
 from services.character_service import sync_characters
+from services.economy_service import ensure_initial_market_prices
 from services.listing_service import load_npc_market_seed, seed_npc_marketplace
 
 
@@ -41,6 +43,7 @@ def create_app(settings: Settings | None = None) -> Dash:
             items_by_id,
             settings.default_listing_expiration_days,
         )
+        ensure_initial_market_prices(session_factory, item_catalog, settings)
     except Exception as exc:
         if "engine" in locals():
             engine.dispose()
@@ -60,6 +63,9 @@ def create_app(settings: Settings | None = None) -> Dash:
     )
     register_navigation(app, item_catalog, characters, settings.marketplace_poll_interval_ms)
     register_marketplace_callbacks(app, item_catalog, session_factory, settings)
+    app.server.config["AUCTION_HOUSE_ITEMS"] = item_catalog
+    app.server.config["AUCTION_HOUSE_SESSION_FACTORY"] = session_factory
+    app.server.config["AUCTION_HOUSE_SETTINGS"] = settings
     return app
 
 
@@ -69,8 +75,15 @@ def main() -> None:
     logger.info("Starting auction house on %s:%s", settings.host, settings.port)
     logger.info("LAN clients can connect at http://<host-lan-ip>:%s", settings.port)
 
+    scheduler = None
     try:
         app = create_app(settings)
+        scheduler = create_economy_scheduler(
+            app.server.config["AUCTION_HOUSE_SESSION_FACTORY"],
+            app.server.config["AUCTION_HOUSE_ITEMS"],
+            app.server.config["AUCTION_HOUSE_SETTINGS"],
+        )
+        scheduler.start()
         app.run(host=settings.host, port=settings.port, debug=False, use_reloader=False)
     except OSError as exc:
         logger.error("Unable to start server on port %s: %s", settings.port, exc)
@@ -79,6 +92,8 @@ def main() -> None:
         logger.exception("Application startup failed")
         raise SystemExit(1) from None
     finally:
+        if scheduler is not None and scheduler.running:
+            scheduler.shutdown(wait=False)
         logger.info("Auction house stopped")
 
 

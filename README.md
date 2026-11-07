@@ -53,9 +53,20 @@ Configuration is read from environment variables prefixed with `AUCTION_`:
 | `AUCTION_DATABASE_PATH` | `instance/auction_house.db` | SQLite database path |
 | `AUCTION_LOG_LEVEL` | `INFO` | Log verbosity |
 | `AUCTION_LOG_PATH` | `logs/auction_house.log` | Log file path |
+| `AUCTION_MINIMUM_PRICE_MULTIPLIER` | `0.25` | Lower overall price multiplier |
+| `AUCTION_MAXIMUM_PRICE_MULTIPLIER` | `4.0` | Upper overall price multiplier |
+| `AUCTION_MAX_PRICE_CHANGE_PERCENT` | `10` | Maximum price movement per update |
+| `AUCTION_ECONOMY_TARGET_SUPPLY_QUANTITY` | `10` | Target active supply per item |
+| `AUCTION_ECONOMY_TARGET_DEMAND_QUANTITY` | `5` | Target quantity sold in the demand window |
+| `AUCTION_ECONOMY_DEMAND_WINDOW_HOURS` | `168` | Rolling demand window |
+| `AUCTION_ECONOMY_SMOOTHING_FACTOR` | `0.5` | Weight given to the new calculated price |
+| `AUCTION_ECONOMY_MINIMUM_PRICE_GP` | `1` | Price floor in gold pieces |
+| `AUCTION_ECONOMY_PRICE_ROUNDING_INCREMENT` | `1` | Price rounding denomination in gold pieces |
+| `AUCTION_ECONOMY_UPDATE_INTERVAL_MINUTES` | `60` | Scheduled price recalculation interval |
+| `AUCTION_MARKET_HISTORY_INTERVAL_MINUTES` | `60` | Scheduled history snapshot interval |
 
-Other simulation and economy defaults are centralized in `config.py` for
-later phases. They do not activate background jobs yet.
+Other simulation defaults are centralized in `config.py`; NPC background
+simulation remains a later phase.
 
 ## Marketplace
 
@@ -85,6 +96,23 @@ transactions are kept in the ledger but never count as player proceeds.
 The Player view shows that character's completed sales, while the DM view
 shows recent transactions. Completed transactions are retained in
 SQLite; player collection acknowledgment is not implemented yet.
+
+## Economy
+
+Market prices use each item's JSON `base_price`, total active listing
+quantity, and completed quantity sold in the recent demand window. Defaults
+target 10 units of supply and 5 units sold over 168 hours. Supply and demand
+multipliers are combined, clamped to the configured minimum/maximum
+multipliers, smoothed, limited to a 10% change per update, floored at 1 gp,
+and rounded to whole gold pieces. These defaults are configurable in
+`config.py`.
+
+Missing current prices are initialized at app startup. APScheduler
+recalculates prices and records history at the configured intervals. The
+DM can also use **Recalculate prices** for an immediate update and snapshot;
+the dashboard charts an item's history and shows current supply and recent
+demand. The Player listing preview shows a recommendation, but does not
+change the player's entered asking price.
 
 ## Catalog Data
 

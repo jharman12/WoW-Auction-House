@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import quote, unquote
 
 from dash import ALL, Dash, Input, Output, State, ctx, html, no_update
+import plotly.graph_objects as go
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import Settings
@@ -15,6 +16,12 @@ from services.auction_service import (
     get_recent_transactions,
 )
 from services.catalog_service import CatalogItem
+from services.economy_service import (
+    MarketPriceView,
+    get_current_market_prices,
+    get_market_history,
+    update_market_prices,
+)
 from services.listing_service import (
     ListingError,
     ListingView,
@@ -58,6 +65,80 @@ def _format_expiration(expires_at: datetime | None) -> str:
         return "no expiry"
     timestamp = expires_at.replace(tzinfo=UTC) if expires_at.tzinfo is None else expires_at
     return f"expires {timestamp.astimezone().strftime('%b %d')}"
+
+
+def _market_price_figure(item_name: str, history) -> go.Figure:
+    figure = go.Figure()
+    if history:
+        timestamps = [
+            (point.recorded_at.replace(tzinfo=UTC) if point.recorded_at.tzinfo is None else point.recorded_at)
+            .astimezone()
+            for point in history
+        ]
+        figure.add_trace(
+            go.Scatter(
+                x=timestamps,
+                y=[float(point.market_price) for point in history],
+                mode="lines+markers",
+                name="Market price",
+                line={"color": "#c7a263", "width": 2},
+                marker={"color": "#90c6c1", "size": 7},
+                customdata=[[point.active_supply, point.recent_quantity_sold] for point in history],
+                hovertemplate=(
+                    "%{x|%b %d, %Y %H:%M}<br>Price: %{y:,.2f} gp"
+                    "<br>Active supply: %{customdata[0]}"
+                    "<br>Recently sold: %{customdata[1]}<extra></extra>"
+                ),
+            )
+        )
+    else:
+        figure.add_annotation(
+            text="No price history yet",
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            font={"color": "#aaa99d"},
+        )
+    figure.update_layout(
+        title={"text": f"{item_name} · price history", "font": {"size": 17, "color": "#e9e5d7"}},
+        paper_bgcolor="#18201b",
+        plot_bgcolor="#18201b",
+        font={"color": "#aaa99d", "family": "Trebuchet MS, sans-serif", "size": 11},
+        margin={"l": 48, "r": 20, "t": 48, "b": 40},
+        xaxis={"gridcolor": "#39413a", "zerolinecolor": "#39413a", "title": "Recorded"},
+        yaxis={"gridcolor": "#39413a", "zerolinecolor": "#39413a", "title": "Gold pieces", "rangemode": "tozero"},
+        showlegend=False,
+    )
+    return figure
+
+
+def _market_price_table(views: list[MarketPriceView]) -> html.Table:
+    rows = [
+        html.Tr(
+            [
+                html.Th("Item", scope="col"),
+                html.Th("Base", scope="col"),
+                html.Th("Current", scope="col"),
+                html.Th("Supply", scope="col"),
+                html.Th("Recent sold", scope="col"),
+            ]
+        )
+    ]
+    rows.extend(
+        html.Tr(
+            [
+                html.Td(view.item_name),
+                html.Td(f"{_format_price(view.base_price)} gp"),
+                html.Td(f"{_format_price(view.market_price)} gp"),
+                html.Td(str(view.active_supply)),
+                html.Td(str(view.recent_quantity_sold)),
+            ]
+        )
+        for view in views
+    )
+    return html.Table(rows, className="market-price-table-element")
 
 
 def _item_image(item: CatalogItem) -> html.Div | html.Img:
@@ -380,7 +461,13 @@ def register_marketplace_callbacks(
                 price_text = f"{_format_price(Decimal(str(asking_price)))} gp each"
             except InvalidOperation:
                 price_text = "invalid price"
-        return f"Preview: {quantity_text} × {item.name} · {item.rarity.replace('_', ' ')} · {price_text}"
+        current_prices = {view.item_id: view.market_price for view in get_current_market_prices(session_factory, items)}
+        estimate = current_prices.get(item.id)
+        estimate_text = f" · Market estimate: {_format_price(estimate)} gp each" if estimate is not None else ""
+        return (
+            f"Preview: {quantity_text} × {item.name} · {item.rarity.replace('_', ' ')} · {price_text}"
+            f"{estimate_text}. Your asking price is not changed."
+        )
 
     @app.callback(
         Output("listing-feedback", "children"),
@@ -525,3 +612,24 @@ def register_marketplace_callbacks(
             "No app-managed gold will be deducted or stored."
         )
         return True, listing.id, message
+
+    @app.callback(
+        Output("market-price-chart", "figure"),
+        Output("market-price-table", "children"),
+        Output("market-update-feedback", "children"),
+        Input("market-history-item", "value"),
+        Input("market-update-prices", "n_clicks"),
+        Input("listing-refresh-token", "data"),
+    )
+    def refresh_economy_dashboard(item_id: str | None, update_clicks: int, _refresh_token: int):
+        feedback = no_update
+        if ctx.triggered_id == "market-update-prices" and _has_positive_click(update_clicks):
+            updates = update_market_prices(session_factory, items, settings)
+            feedback = f"Saved a price snapshot for {len(updates)} catalog items."
+
+        current_prices = get_current_market_prices(session_factory, items)
+        selected_item = item_id if item_id in items_by_id else (items[0].id if items else None)
+        history = get_market_history(session_factory, selected_item) if selected_item else []
+        selected_name = items_by_id[selected_item].name if selected_item else "Market"
+        figure = _market_price_figure(selected_name, history)
+        return figure, _market_price_table(current_prices), feedback

@@ -122,3 +122,35 @@ class AppSetting(Base):
     key: Mapped[str] = mapped_column(String(120), primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class MarketPrice(Base):
+    __tablename__ = "market_prices"
+    __table_args__ = (
+        CheckConstraint("market_price > 0", name="ck_market_prices_positive"),
+        CheckConstraint("active_supply >= 0", name="ck_market_prices_supply_nonnegative"),
+        CheckConstraint("recent_quantity_sold >= 0", name="ck_market_prices_demand_nonnegative"),
+    )
+
+    item_id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    market_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    active_supply: Mapped[int] = mapped_column(Integer, nullable=False)
+    recent_quantity_sold: Mapped[int] = mapped_column(Integer, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class MarketHistory(Base):
+    __tablename__ = "market_history"
+    __table_args__ = (
+        CheckConstraint("market_price > 0", name="ck_market_history_price_positive"),
+        CheckConstraint("active_supply >= 0", name="ck_market_history_supply_nonnegative"),
+        CheckConstraint("recent_quantity_sold >= 0", name="ck_market_history_demand_nonnegative"),
+        Index("ix_market_history_item_recorded", "item_id", "recorded_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    market_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    active_supply: Mapped[int] = mapped_column(Integer, nullable=False)
+    recent_quantity_sold: Mapped[int] = mapped_column(Integer, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

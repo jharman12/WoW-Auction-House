@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from app import create_app
 from config import PROJECT_ROOT, Settings
 from database.connection import make_engine, make_session_factory
-from database.models import Listing, Transaction
+from database.models import Listing, MarketHistory, Transaction
 from services.catalog_service import load_item_catalog
 from services.listing_service import create_player_listing
 
@@ -375,3 +375,75 @@ def test_new_purchase_confirmation_with_zero_clicks_does_not_buy_listing(tmp_pat
         assert session.get(Listing, listing_id).status == "ACTIVE"
         assert session.scalar(select(func.count(Transaction.id))) == 0
     engine.dispose()
+
+
+def test_dm_price_dashboard_records_and_charts_manual_updates(tmp_path: Path) -> None:
+    database_path = tmp_path / "auction_house.db"
+    settings = Settings(database_path=database_path, log_path=tmp_path / "app.log")
+    app = create_app(settings)
+    client = app.server.test_client()
+    chart_key = next(key for key in app.callback_map if "market-price-chart.figure" in key)
+    inputs = {
+        ("market-history-item", "value"): "redleaf-tonic",
+        ("market-update-prices", "n_clicks"): 0,
+        ("listing-refresh-token", "data"): 0,
+    }
+
+    initial = _run_callback(
+        client,
+        app,
+        chart_key,
+        inputs,
+        {},
+        ["market-history-item.value"],
+    )
+    assert initial.status_code == 200
+    initial_content = json.dumps(initial.get_json())
+    assert "Redleaf Tonic" in initial_content
+    assert "market price" in initial_content.lower()
+
+    inputs[("market-update-prices", "n_clicks")] = 1
+    updated = _run_callback(
+        client,
+        app,
+        chart_key,
+        inputs,
+        {},
+        ["market-update-prices.n_clicks"],
+    )
+    assert updated.status_code == 200
+    assert "Saved a price snapshot for 8 catalog items." in updated.get_data(as_text=True)
+
+    engine = make_engine(database_path)
+    try:
+        with engine.connect() as connection:
+            history_count = connection.execute(
+                select(func.count(MarketHistory.id)).where(MarketHistory.item_id == "redleaf-tonic")
+            ).scalar_one()
+        assert history_count == 2
+    finally:
+        engine.dispose()
+
+
+def test_player_listing_preview_shows_non_binding_market_estimate(tmp_path: Path) -> None:
+    settings = Settings(database_path=tmp_path / "auction_house.db", log_path=tmp_path / "app.log")
+    app = create_app(settings)
+    client = app.server.test_client()
+    preview_key = "listing-preview.children"
+
+    response = _run_callback(
+        client,
+        app,
+        preview_key,
+        {
+            ("listing-item", "value"): "redleaf-tonic",
+            ("listing-quantity", "value"): 2,
+            ("listing-price", "value"): 13,
+        },
+        {},
+        ["listing-item.value"],
+    )
+
+    assert response.status_code == 200
+    assert "Market estimate:" in response.get_data(as_text=True)
+    assert "Your asking price is not changed." in response.get_data(as_text=True)

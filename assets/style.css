@@ -945,3 +945,84 @@ h1 {
         flex-direction: row;
     }
 }
+
+.economy-panel {
+    margin: 30px 0 42px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    background: linear-gradient(125deg, rgb(36 48 41 / 88%), rgb(24 31 28 / 94%));
+}
+
+.economy-heading {
+    align-items: center;
+}
+
+.economy-caption {
+    margin: 10px 0 16px;
+    color: var(--muted);
+    font: 12px/1.6 "Trebuchet MS", sans-serif;
+}
+
+.economy-item-select {
+    max-width: 360px;
+}
+
+.market-price-chart {
+    min-height: 280px;
+    margin-top: 12px;
+}
+
+.market-price-table {
+    max-width: 100%;
+    overflow-x: auto;
+    border-top: 1px solid var(--line);
+}
+
+.market-price-table-element {
+    width: 100%;
+    border-collapse: collapse;
+    font: 12px/1.5 "Trebuchet MS", sans-serif;
+    text-align: left;
+}
+
+.market-price-table-element th,
+.market-price-table-element td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgb(57 65 58 / 78%);
+    white-space: nowrap;
+}
+
+.market-price-table-element th {
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.market-price-table-element td {
+    color: var(--ink);
+}
+
+@media (max-width: 620px) {
+    .economy-panel {
+        margin: 26px 0 34px;
+        padding: 17px 14px;
+    }
+
+    .economy-heading {
+        align-items: start;
+    }
+
+    .economy-heading .action-button {
+        min-height: 36px;
+    }
+
+    .market-price-chart {
+        min-height: 240px;
+    }
+
+    .market-price-table-element th,
+    .market-price-table-element td {
+        padding: 8px;
+    }
+}
