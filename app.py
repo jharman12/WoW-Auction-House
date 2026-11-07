@@ -3,6 +3,7 @@ import logging
 from dash import Dash, dcc, html
 
 from callbacks.navigation import register_navigation
+from callbacks.marketplace import register_marketplace_callbacks
 from config import PROJECT_ROOT, Settings
 from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
@@ -10,6 +11,7 @@ from layouts.pages import landing_page
 from logging_config import configure_logging
 from services.catalog_service import load_characters, load_item_catalog
 from services.character_service import sync_characters
+from services.listing_service import load_npc_market_seed, seed_npc_marketplace
 
 
 logger = logging.getLogger(__name__)
@@ -25,15 +27,23 @@ def create_app(settings: Settings | None = None) -> Dash:
         PROJECT_ROOT / "data" / "characters.json",
         PROJECT_ROOT / "assets" / "images" / "characters",
     )
+    npc_market_seed = load_npc_market_seed(PROJECT_ROOT / "data" / "npc_market_seed.json")
+    items_by_id = {item.id: item for item in item_catalog}
 
     try:
         upgrade_database(settings.database_path)
         engine = make_engine(settings.database_path)
-        try:
-            sync_characters(characters, make_session_factory(engine))
-        finally:
-            engine.dispose()
+        session_factory = make_session_factory(engine)
+        sync_characters(characters, session_factory)
+        seed_npc_marketplace(
+            session_factory,
+            npc_market_seed,
+            items_by_id,
+            settings.default_listing_expiration_days,
+        )
     except Exception as exc:
+        if "engine" in locals():
+            engine.dispose()
         raise RuntimeError(f"Unable to initialize database at {settings.database_path}") from exc
 
     app = Dash(
@@ -48,7 +58,8 @@ def create_app(settings: Settings | None = None) -> Dash:
             html.Div(landing_page(), id="page-content"),
         ]
     )
-    register_navigation(app, item_catalog, characters)
+    register_navigation(app, item_catalog, characters, settings.marketplace_poll_interval_ms)
+    register_marketplace_callbacks(app, item_catalog, session_factory, settings)
     return app
 
 

@@ -1,9 +1,9 @@
 # WoW Auction House
 
-A local-network auction house for a D&D campaign. Phase 1 provides the
-application foundation, editable JSON catalogs, character selection, and
-the initial Player and DM views. Marketplace listings and transactions
-are planned for later phases.
+A local-network auction house for a D&D campaign. Phase 2 provides
+editable JSON catalogs, Player/DM navigation, a shared Player/NPC market,
+listing creation and management, and catalog-backed item details.
+Purchases and transaction history are planned for Phase 3.
 
 ## Requirements
 
@@ -56,6 +56,22 @@ Configuration is read from environment variables prefixed with `AUCTION_`:
 
 Other simulation and economy defaults are centralized in `config.py` for
 later phases. They do not activate background jobs yet.
+
+## Marketplace
+
+Player listings use the selected character context and can be cancelled
+from that character's active-listing view. Asking prices are entered and
+shown per item in gold pieces; the app does not set a player price or
+manage a gold balance. Listings expire after the configured
+`AUCTION_DEFAULT_LISTING_EXPIRATION_DAYS` period, defaulting to 14 days.
+Expired and cancelled listings remain in SQLite, and expired listings
+are moved out of the active market when it refreshes.
+
+The campaign's initial NPC stock is in `data/npc_market_seed.json`.
+Startup seeds those NPCs and listings once; restarting the app does not
+duplicate them or recreate listings that have been cancelled. This is
+static sample stock, not the scheduled NPC simulation planned for a
+later phase. The DM view can cancel any active listing.
 
 ## Catalog Data
 
@@ -115,6 +131,7 @@ python -m pytest
 ```
 
 The tests cover configuration validation, database migration and
-persistence, catalog and character validation, route navigation, and the
-basic Dash response. LAN reachability from a second device must be
-verified on the campaign network.
+persistence, catalog and character validation, shared Player/NPC
+listings, filtering, details, creation, cancellation, expiration, and
+Dash navigation. LAN reachability from a second device must be verified
+on the campaign network.

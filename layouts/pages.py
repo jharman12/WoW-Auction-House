@@ -1,3 +1,4 @@
+import json
 from urllib.parse import quote, unquote
 
 from dash import dcc, html
@@ -114,9 +115,157 @@ def character_selection_page(characters: list[CharacterDefinition]) -> html.Div:
     )
 
 
+def _marketplace_workspace(
+    items: list[CatalogItem],
+    poll_interval_ms: int,
+    show_listing_form: bool,
+) -> html.Div:
+    enabled_items = [item for item in items if item.enabled]
+    categories = sorted({item.category for item in enabled_items})
+    rarities = sorted({item.rarity for item in enabled_items})
+    listing_form = html.Section(
+            [
+                html.Div(
+                    [
+                        html.P("YOUR STALL", className="eyebrow"),
+                        html.H2("Create a listing"),
+                    ],
+                    className="section-heading",
+                ),
+                html.Div(
+                    [
+                        dcc.Dropdown(
+                            id="listing-item",
+                            options=[
+                                {"label": f"{item.name} · {item.rarity.replace('_', ' ')}", "value": item.id}
+                                for item in enabled_items
+                            ],
+                            placeholder="Choose a catalog item",
+                            clearable=True,
+                            searchable=True,
+                            className="market-dropdown listing-item-control",
+                        ),
+                        dcc.Input(id="listing-quantity", type="number", min=1, step=1, value=1, debounce=True),
+                        dcc.Input(
+                            id="listing-price",
+                            type="number",
+                            min=0.01,
+                            step=0.01,
+                            debounce=True,
+                            placeholder="Price each (gp)",
+                        ),
+                        html.Button("Create listing", id="create-listing", n_clicks=0, className="action-button"),
+                    ],
+                    className="listing-form-grid",
+                ),
+                html.P("Choose an item to preview its listing details before posting.", id="listing-preview", className="listing-preview"),
+            ],
+            className="listing-composer" if show_listing_form else "listing-composer visually-hidden",
+        )
+
+    return html.Div(
+        [
+            dcc.Interval(id="market-poll", interval=poll_interval_ms, n_intervals=0),
+            dcc.Store(id="listing-refresh-token", data=0),
+            dcc.Store(id="listing-page", data=1),
+            listing_form,
+            html.P(id="listing-feedback", className="listing-feedback", role="status"),
+            html.Section(
+                [
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.P("SHARED EXCHANGE", className="eyebrow"),
+                                    html.H2("Active listings"),
+                                ],
+                                className="section-heading",
+                            ),
+                            html.P("", id="market-count", className="market-count"),
+                        ],
+                        className="market-heading-row",
+                    ),
+                    html.Div(
+                        [
+                            dcc.Input(
+                                id="market-search",
+                                type="search",
+                                placeholder="Search item names and tags",
+                                debounce=True,
+                                className="market-search",
+                            ),
+                            dcc.Dropdown(
+                                id="market-category",
+                                options=[{"label": "All categories", "value": "all"}]
+                                + [{"label": value.replace("_", " ").title(), "value": value} for value in categories],
+                                value="all",
+                                clearable=False,
+                                className="market-dropdown",
+                            ),
+                            dcc.Dropdown(
+                                id="market-rarity",
+                                options=[{"label": "All rarities", "value": "all"}]
+                                + [{"label": value.replace("_", " ").title(), "value": value} for value in rarities],
+                                value="all",
+                                clearable=False,
+                                className="market-dropdown",
+                            ),
+                            dcc.Dropdown(
+                                id="market-sort",
+                                options=[
+                                    {"label": "Newest", "value": "newest"},
+                                    {"label": "Oldest", "value": "oldest"},
+                                    {"label": "Price: low to high", "value": "price_asc"},
+                                    {"label": "Price: high to low", "value": "price_desc"},
+                                    {"label": "Item name", "value": "name"},
+                                    {"label": "Rarity", "value": "rarity"},
+                                ],
+                                value="newest",
+                                clearable=False,
+                                className="market-dropdown",
+                            ),
+                        ],
+                        className="market-filters",
+                    ),
+                    html.Div("Loading active listings...", id="market-listings", className="listing-stack"),
+                    html.Div(
+                        [
+                            html.Button("Previous", id="market-previous", n_clicks=0, className="quiet-button"),
+                            html.Span("Page 1 of 1", id="market-page-label", className="market-page-label"),
+                            html.Button("Next", id="market-next", n_clicks=0, className="quiet-button"),
+                        ],
+                        className="market-pagination",
+                    ),
+                    html.Section(
+                        html.P("Select Inspect on a listing to view its details.", className="detail-empty"),
+                        id="listing-details",
+                        className="listing-details",
+                    ),
+                ],
+                className="market-section",
+            ),
+            html.Section(
+                [
+                    html.Div(
+                        [
+                            html.P("ACCOUNT ACTIVITY" if show_listing_form else "DM CONTROLS", className="eyebrow"),
+                            html.H2("Your active listings" if show_listing_form else "Manage active listings"),
+                        ],
+                        className="section-heading",
+                    ),
+                    html.Div("Loading...", id="owner-listings", className="listing-stack owner-listings"),
+                ],
+                className="owner-listings-section",
+            ),
+        ],
+        className="marketplace-workspace",
+    )
+
+
 def player_marketplace_page(
     character: CharacterDefinition,
-    item_count: int,
+    items: list[CatalogItem],
+    poll_interval_ms: int,
 ) -> html.Div:
     return html.Div(
         [
@@ -125,18 +274,8 @@ def player_marketplace_page(
                 [
                     html.P(f"TRADING AS {character.name.upper()}", className="eyebrow"),
                     html.H1("Marketplace"),
-                    html.P("The campaign exchange is being prepared for its first listings.", className="intro-copy"),
-                    html.Section(
-                        [
-                            html.Div("*", className="empty-mark", role="presentation"),
-                            html.H2("The stalls are quiet for now"),
-                            html.P(
-                                f"{item_count} catalog items are ready. Shared listings and browsing arrive in Phase 2.",
-                                className="empty-copy",
-                            ),
-                        ],
-                        className="empty-state",
-                    ),
+                    html.P("Browse the campaign exchange or post an item from your inventory.", className="intro-copy"),
+                    _marketplace_workspace(items, poll_interval_ms, show_listing_form=True),
                 ],
                 className="content-page",
             ),
@@ -145,7 +284,11 @@ def player_marketplace_page(
     )
 
 
-def dm_dashboard_page(item_count: int, character_count: int) -> html.Div:
+def dm_dashboard_page(
+    items: list[CatalogItem],
+    character_count: int,
+    poll_interval_ms: int,
+) -> html.Div:
     return html.Div(
         [
             _masthead("DM Dashboard", "Home", "/"),
@@ -153,11 +296,11 @@ def dm_dashboard_page(item_count: int, character_count: int) -> html.Div:
                 [
                     html.P("CAMPAIGN CONTROL", className="eyebrow"),
                     html.H1("DM Dashboard"),
-                    html.P("The foundation is ready. Market activity will appear here as it is built.", className="intro-copy"),
+                    html.P("Review the shared market and manage active listings.", className="intro-copy"),
                     html.Div(
                         [
                             html.Section(
-                                [html.P("CATALOG", className="eyebrow"), html.Strong(str(item_count)), html.Span("items loaded")],
+                                [html.P("CATALOG", className="eyebrow"), html.Strong(str(len(items))), html.Span("items loaded")],
                                 className="metric-panel",
                             ),
                             html.Section(
@@ -165,12 +308,13 @@ def dm_dashboard_page(item_count: int, character_count: int) -> html.Div:
                                 className="metric-panel",
                             ),
                             html.Section(
-                                [html.P("MARKET", className="eyebrow"), html.Strong("Not started"), html.Span("listings begin in Phase 2")],
+                                [html.P("MARKET", className="eyebrow"), html.Strong("Live"), html.Span("shared player and NPC listings")],
                                 className="metric-panel",
                             ),
                         ],
                         className="metric-grid",
                     ),
+                    _marketplace_workspace(items, poll_interval_ms, show_listing_form=False),
                 ],
                 className="content-page",
             ),
@@ -200,16 +344,17 @@ def resolve_page(
     pathname: str | None,
     items: list[CatalogItem],
     characters: list[CharacterDefinition],
+    poll_interval_ms: int,
 ) -> html.Div:
     if pathname in (None, "", "/"):
         return landing_page()
     if pathname == "/characters":
         return character_selection_page(characters)
     if pathname == "/dm":
-        return dm_dashboard_page(len(items), len(characters))
+        return dm_dashboard_page(items, len(characters), poll_interval_ms)
     if pathname.startswith("/player/"):
         character_id = unquote(pathname.removeprefix("/player/"))
         character = next((entry for entry in characters if entry.id == character_id), None)
         if character is not None:
-            return player_marketplace_page(character, len(items))
+            return player_marketplace_page(character, items, poll_interval_ms)
     return not_found_page()

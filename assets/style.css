@@ -411,3 +411,537 @@ h1 {
         border-bottom: 1px solid var(--line);
     }
 }
+
+.visually-hidden {
+    display: none;
+}
+
+.marketplace-workspace {
+    margin-top: 40px;
+}
+
+.listing-composer {
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    background: linear-gradient(120deg, rgb(41 53 44 / 93%), rgb(26 33 29 / 96%));
+}
+
+.section-heading .eyebrow {
+    margin-bottom: 6px;
+    font-size: 10px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 400;
+}
+
+.listing-form-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.8fr) minmax(90px, 0.5fr) minmax(130px, 0.8fr) auto;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.listing-form-grid input,
+.market-search {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #485248;
+    border-radius: 0;
+    background: #141a17;
+    color: var(--ink);
+    font: 13px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.listing-form-grid input::placeholder,
+.market-search::placeholder {
+    color: #858b80;
+}
+
+.action-button,
+.quiet-button,
+.text-button {
+    min-height: 38px;
+    border: 1px solid #7d6846;
+    border-radius: 0;
+    background: #3a3427;
+    color: #eddfbd;
+    cursor: pointer;
+    font: 700 11px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.action-button {
+    padding: 0 16px;
+}
+
+.action-button:hover,
+.quiet-button:hover {
+    border-color: var(--gold);
+    background: #4a412f;
+}
+
+.quiet-button {
+    min-height: 32px;
+    padding: 0 11px;
+    background: #202723;
+    color: var(--ink);
+}
+
+.text-button {
+    min-height: 32px;
+    padding: 0 9px;
+    border-color: transparent;
+    background: transparent;
+    color: #d2977f;
+}
+
+.text-button:hover {
+    border-color: #805747;
+    background: rgb(114 67 52 / 18%);
+}
+
+.listing-preview,
+.listing-feedback {
+    min-height: 20px;
+    margin: 12px 0 0;
+    color: var(--muted);
+    font: 12px/1.5 "Trebuchet MS", sans-serif;
+}
+
+.listing-feedback:not(:empty) {
+    padding: 10px 0;
+    color: #dfc58e;
+}
+
+.market-section {
+    margin-top: 46px;
+}
+
+.market-heading-row {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.market-count {
+    margin: 0 0 3px;
+    color: var(--muted);
+    font: 12px/1.4 "Trebuchet MS", sans-serif;
+    text-align: right;
+}
+
+.market-filters {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.7fr) repeat(3, minmax(130px, 1fr));
+    gap: 9px;
+    margin: 20px 0 13px;
+}
+
+.market-dropdown {
+    min-width: 0;
+    color: var(--ink);
+    font: 12px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.market-dropdown .Select-control {
+    min-height: 42px;
+    border: 1px solid #485248;
+    border-radius: 0;
+    background: #141a17;
+    color: var(--ink);
+}
+
+.market-dropdown .Select-value-label,
+.market-dropdown .Select-placeholder,
+.market-dropdown .Select-input > input {
+    color: var(--ink) !important;
+}
+
+.market-dropdown .Select-menu-outer {
+    z-index: 20;
+    border: 1px solid #485248;
+    border-radius: 0;
+    background: #202723;
+}
+
+.market-dropdown .Select-option {
+    background: #202723;
+    color: var(--ink);
+}
+
+.market-dropdown .Select-option.is-focused {
+    background: #344239;
+}
+
+.listing-stack {
+    display: grid;
+    gap: 7px;
+}
+
+.listing-row {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) minmax(90px, 130px) auto;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 13px;
+    border: 1px solid #343d37;
+    background: linear-gradient(100deg, #222b26, #191f1d 68%, #202522);
+}
+
+.listing-art {
+    width: 64px;
+    height: 64px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #59604f;
+    background: #30362e;
+    color: #e2d4ad;
+    font-size: 24px;
+    object-fit: cover;
+}
+
+.art-uncommon {
+    border-color: #6e8b6a;
+    background: #28382e;
+}
+
+.art-rare {
+    border-color: #628b8b;
+    background: #243839;
+}
+
+.art-very_rare {
+    border-color: #8a75a4;
+    background: #352c40;
+}
+
+.art-legendary,
+.art-artifact {
+    border-color: var(--gold);
+    background: #453b27;
+}
+
+.listing-main {
+    min-width: 0;
+}
+
+.listing-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px 10px;
+}
+
+.listing-title-row h3 {
+    min-width: 0;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 400;
+}
+
+.rarity-tag {
+    color: #c4c6bc;
+    font: 700 9px/1.4 "Trebuchet MS", sans-serif;
+    text-transform: uppercase;
+}
+
+.rarity-uncommon {
+    color: #a4ca95;
+}
+
+.rarity-rare {
+    color: #90c6c1;
+}
+
+.rarity-very_rare {
+    color: #bca3d8;
+}
+
+.rarity-legendary,
+.rarity-artifact {
+    color: #e5bd70;
+}
+
+.listing-seller,
+.listing-meta {
+    margin: 5px 0 0;
+    color: var(--muted);
+    font: 11px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.listing-meta {
+    color: #838b81;
+    text-transform: capitalize;
+}
+
+.listing-price {
+    display: grid;
+    justify-items: end;
+    color: #e4d3a9;
+}
+
+.listing-price strong {
+    font: 18px/1.2 Georgia, serif;
+    white-space: nowrap;
+}
+
+.price-unit {
+    margin-top: 3px;
+    color: var(--muted);
+    font: 10px/1.3 "Trebuchet MS", sans-serif;
+}
+
+.listing-actions {
+    display: flex;
+    justify-content: end;
+    gap: 6px;
+}
+
+.listing-empty {
+    padding: 25px 16px;
+    border: 1px dashed #465047;
+    color: var(--muted);
+    font: 13px/1.5 "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
+.market-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 17px;
+}
+
+.market-page-label {
+    min-width: 90px;
+    color: var(--muted);
+    font: 11px/1.4 "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
+.listing-details {
+    margin-top: 26px;
+}
+
+.listing-detail-content {
+    display: grid;
+    grid-template-columns: 156px minmax(0, 1fr);
+    gap: 22px;
+    padding: 22px;
+    border: 1px solid var(--line);
+    background: linear-gradient(120deg, rgb(43 53 46 / 72%), rgb(25 31 28 / 86%));
+}
+
+.listing-detail-content > .listing-art {
+    width: 156px;
+    height: 156px;
+    font-size: 44px;
+}
+
+.detail-copy h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 400;
+}
+
+.detail-description {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font: 13px/1.65 "Trebuchet MS", sans-serif;
+}
+
+.detail-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.detail-facts > div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.detail-facts span,
+.property-row span:first-child {
+    color: #91998e;
+    font: 10px/1.4 "Trebuchet MS", sans-serif;
+    text-transform: uppercase;
+}
+
+.detail-facts strong,
+.property-row span:last-child {
+    overflow-wrap: anywhere;
+    color: var(--ink);
+    font: 12px/1.5 "Trebuchet MS", sans-serif;
+    text-transform: capitalize;
+}
+
+.property-list {
+    display: grid;
+    gap: 5px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+
+.property-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.6fr) minmax(0, 1fr);
+    gap: 12px;
+}
+
+.detail-empty {
+    margin: 0;
+    padding: 14px 0;
+    color: var(--muted);
+    font: 12px/1.5 "Trebuchet MS", sans-serif;
+}
+
+.owner-listings-section {
+    margin-top: 48px;
+    padding-top: 27px;
+    border-top: 1px solid var(--line);
+}
+
+.owner-listings {
+    margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+    .listing-form-grid {
+        grid-template-columns: minmax(180px, 1.5fr) minmax(80px, 0.5fr) minmax(120px, 0.8fr);
+    }
+
+    .listing-form-grid .action-button {
+        grid-column: 1 / -1;
+    }
+
+    .market-filters {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .market-search {
+        grid-column: 1 / -1;
+    }
+
+    .detail-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .marketplace-workspace {
+        margin-top: 30px;
+    }
+
+    .listing-composer {
+        padding: 18px 15px;
+    }
+
+    .listing-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .listing-form-grid .listing-item-control,
+    .listing-form-grid .action-button {
+        grid-column: 1 / -1;
+    }
+
+    .market-heading-row {
+        align-items: start;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .market-count {
+        text-align: left;
+    }
+
+    .market-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .market-search {
+        grid-column: 1 / -1;
+    }
+
+    .listing-row {
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 9px;
+    }
+
+    .listing-art {
+        width: 48px;
+        height: 48px;
+    }
+
+    .listing-title-row h3 {
+        font-size: 15px;
+    }
+
+    .listing-price {
+        grid-column: 2;
+        grid-row: 2;
+        justify-items: start;
+    }
+
+    .listing-actions {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+        align-self: center;
+        flex-direction: column;
+    }
+
+    .listing-detail-content {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+
+    .listing-detail-content > .listing-art {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 7;
+    }
+
+    .detail-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 390px) {
+    .market-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .market-search {
+        grid-column: auto;
+    }
+
+    .listing-row {
+        grid-template-columns: 42px minmax(0, 1fr);
+    }
+
+    .listing-art {
+        width: 42px;
+        height: 42px;
+    }
+
+    .listing-price,
+    .listing-actions {
+        grid-column: 2;
+        grid-row: auto;
+        justify-items: start;
+        flex-direction: row;
+    }
+}

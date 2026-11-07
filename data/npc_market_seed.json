@@ -1,0 +1,29 @@
+{
+  "sellers": [
+    {
+      "name": "Mara's Wayfarer Goods",
+      "archetype": "Traveling Trader",
+      "listings": [
+        {"item_id": "trail-ration-pack", "quantity": 6, "asking_price": 4},
+        {"item_id": "redleaf-tonic", "quantity": 2, "asking_price": 15}
+      ]
+    },
+    {
+      "name": "Old Renn's Armory",
+      "archetype": "Weapons Dealer",
+      "listings": [
+        {"item_id": "ironbound-shortsword", "quantity": 1, "asking_price": 13},
+        {"item_id": "ashwood-buckler", "quantity": 1, "asking_price": 11}
+      ]
+    },
+    {
+      "name": "Lumen & Root",
+      "archetype": "Curio Merchant",
+      "listings": [
+        {"item_id": "witchlight-lantern", "quantity": 1, "asking_price": 92},
+        {"item_id": "moonstone-dust", "quantity": 3, "asking_price": 34},
+        {"item_id": "stormglass-spear", "quantity": 1, "asking_price": 310}
+      ]
+    }
+  ]
+}
