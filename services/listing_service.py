@@ -66,6 +66,7 @@ class ListingView:
     id: int
     item: CatalogItem
     owner_type: Literal["PLAYER", "NPC"]
+    owner_id: str | int | None
     owner_name: str
     quantity: int
     asking_price: Decimal
@@ -321,6 +322,7 @@ def _listing_views(
                 id=listing.id,
                 item=item,
                 owner_type=listing.owner_type,
+                owner_id=listing.character_id if listing.owner_type == "PLAYER" else listing.npc_id,
                 owner_name=owner_name,
                 quantity=listing.remaining_quantity,
                 asking_price=listing.asking_price,

@@ -75,9 +75,10 @@ later phase. The DM view can cancel any active listing.
 
 ## Purchases And Sales
 
-Players can inspect an NPC listing and choose **Record purchase**. The
-confirmation records the whole listing at its asking price and quantity.
-It does not charge or store player gold. NPC buyer services use the same
+Players can choose **Buy** on another character's or an NPC's market row.
+A confirmation dialog must be accepted before the whole listing is
+recorded as sold at its asking price and quantity. It does not charge or
+store player gold. NPC buyer services use the same
 atomic purchase operation; a sale of a player listing is recorded as
 proceeds for that character to add manually to D&D Beyond. NPC-to-NPC
 transactions are kept in the ledger but never count as player proceeds.

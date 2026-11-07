@@ -162,6 +162,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     assert "Ironbound Shortsword" in market_content
     assert "Mira Coppervale" in market_content
     assert "Mara's Wayfarer Goods" in market_content
+    assert "Buy" in market_content
 
     details_key = next(key for key in app.callback_map if "listing-details.children" in key)
     details_input_id = '{"listing_id":["ALL"],"type":"inspect-listing"}'
@@ -208,17 +209,6 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
             .limit(1)
         ).scalar_one()
 
-    npc_details = _run_callback(
-        client,
-        app,
-        details_key,
-        {(details_input_id, "n_clicks"): [1]},
-        {("url", "pathname"): "/player/mira-coppervale"},
-        [json.dumps({"type": "inspect-listing", "listing_id": npc_listing_id}, separators=(",", ":")) + ".n_clicks"],
-    )
-    assert npc_details.status_code == 200
-    assert "Record purchase" in npc_details.get_data(as_text=True)
-
     purchase_request_key = next(key for key in app.callback_map if "purchase-confirmation.displayed" in key)
     purchase_input_id = '{"listing_id":["ALL"],"type":"purchase-listing"}'
     confirmation = _run_callback(
@@ -230,6 +220,8 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
         [json.dumps({"type": "purchase-listing", "listing_id": npc_listing_id}, separators=(",", ":")) + ".n_clicks"],
     )
     assert confirmation.status_code == 200
+    assert "Buy" in confirmation.get_data(as_text=True)
+    assert "Confirming records the sale and removes this listing" in confirmation.get_data(as_text=True)
     assert "No app-managed gold" in confirmation.get_data(as_text=True)
     purchase_id = confirmation.get_json()["response"]["purchase-listing-id"]["data"]
 
@@ -249,6 +241,18 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     assert purchase_recorded.status_code == 200
     assert "No app-managed gold was deducted" in purchase_recorded.get_data(as_text=True)
 
+    market_inputs[("listing-refresh-token", "data")] = 3
+    purchased_market = _run_callback(
+        client,
+        app,
+        market_key,
+        market_inputs,
+        market_states,
+        ["listing-refresh-token.data"],
+    )
+    purchased_market_content = json.dumps(purchased_market.get_json())
+    assert str(npc_listing_id) not in purchased_market_content
+
     with engine.connect() as connection:
         purchased_listing_status = connection.execute(
             select(Listing.status).where(Listing.id == npc_listing_id)
@@ -265,7 +269,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
         ).scalar_one()
     mutation_inputs[(cancel_input_id, "n_clicks")] = [1]
     mutation_states[("url", "pathname")] = "/dm"
-    mutation_states[("listing-refresh-token", "data")] = 3
+    mutation_states[("listing-refresh-token", "data")] = 4
     dm_cancellation = _run_callback(
         client,
         app,

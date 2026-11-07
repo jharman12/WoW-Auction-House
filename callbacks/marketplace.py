@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from config import Settings
 from services.auction_service import (
     BuyerContext,
-    InvalidBuyerError,
     purchase_listing,
     get_character_sales,
     get_recent_transactions,
@@ -72,7 +71,12 @@ def _item_image(item: CatalogItem) -> html.Div | html.Img:
     return html.Div(item.name[:1].upper(), className=f"listing-art art-{item.rarity}", role="presentation")
 
 
-def _listing_row(listing: ListingView, can_inspect: bool, can_cancel: bool) -> html.Article:
+def _listing_row(
+    listing: ListingView,
+    can_inspect: bool,
+    can_cancel: bool,
+    can_buy: bool = False,
+) -> html.Article:
     actions = []
     if can_inspect:
         actions.append(
@@ -91,6 +95,16 @@ def _listing_row(listing: ListingView, can_inspect: bool, can_cancel: bool) -> h
                 n_clicks=0,
                 className="text-button cancel-listing-button",
                 title="Remove this active listing from the market",
+            )
+        )
+    if can_buy:
+        actions.append(
+            html.Button(
+                "Buy",
+                id={"type": "purchase-listing", "listing_id": listing.id},
+                n_clicks=0,
+                className="action-button buy-listing-button",
+                title="Review and confirm this purchase",
             )
         )
 
@@ -132,7 +146,7 @@ def _listing_row(listing: ListingView, can_inspect: bool, can_cancel: bool) -> h
     )
 
 
-def _listing_details(listing: ListingView | None, can_purchase: bool = False) -> html.Div:
+def _listing_details(listing: ListingView | None) -> html.Div:
     if listing is None:
         return html.Div(
             [html.P("Select a listing to inspect it.", className="detail-empty")],
@@ -165,23 +179,6 @@ def _listing_details(listing: ListingView | None, can_purchase: bool = False) ->
                         className="detail-facts",
                     ),
                     html.Div(properties, className="property-list") if properties else None,
-                    html.Div(
-                        [
-                            html.Button(
-                                "Record purchase",
-                                id={"type": "purchase-listing", "listing_id": listing.id},
-                                n_clicks=0,
-                                className="action-button",
-                            ),
-                            html.P(
-                                "No app-managed gold is charged or stored.",
-                                className="purchase-note",
-                            ),
-                        ],
-                        className="purchase-action",
-                    )
-                    if can_purchase
-                    else None,
                 ],
                 className="detail-copy",
             ),
@@ -295,7 +292,26 @@ def register_marketplace_callbacks(
                 page=page,
             )
 
-        market_rows = [_listing_row(listing, can_inspect=True, can_cancel=False) for listing in results.listings]
+        player_character_id = (
+            unquote(pathname.removeprefix("/player/"))
+            if pathname and pathname.startswith("/player/")
+            else None
+        )
+        market_rows = [
+            _listing_row(
+                listing,
+                can_inspect=True,
+                can_cancel=False,
+                can_buy=bool(
+                    player_character_id
+                    and not (
+                        listing.owner_type == "PLAYER"
+                        and listing.owner_id == player_character_id
+                    )
+                ),
+            )
+            for listing in results.listings
+        ]
         if not market_rows:
             market_content = _empty_listings("No active listings match these filters.")
         else:
@@ -477,13 +493,7 @@ def register_marketplace_callbacks(
             items_by_id,
             int(triggered_id["listing_id"]),
         )
-        can_purchase = bool(
-            listing is not None
-            and listing.owner_type == "NPC"
-            and pathname
-            and pathname.startswith("/player/")
-        )
-        return _listing_details(listing, can_purchase=can_purchase)
+        return _listing_details(listing)
 
     @app.callback(
         Output("purchase-confirmation", "displayed"),
@@ -503,11 +513,15 @@ def register_marketplace_callbacks(
             return False, no_update, "Purchases can only be recorded from a player marketplace."
 
         listing = get_listing_view(session_factory, items_by_id, int(triggered_id["listing_id"]))
-        if listing is None or listing.owner_type != "NPC":
-            return False, no_update, "This NPC listing is no longer available."
+        if listing is None:
+            return False, no_update, "This listing is no longer available."
+        character_id = unquote(pathname.removeprefix("/player/"))
+        if listing.owner_type == "PLAYER" and listing.owner_id == character_id:
+            return False, no_update, "You cannot purchase your own listing."
         total_price = listing.asking_price * listing.quantity
         message = (
-            f"Record purchase of {listing.quantity} x {listing.item.name} from {listing.owner_name} "
-            f"for {_format_price(total_price)} gp? No app-managed gold will be deducted or stored."
+            f"Buy {listing.quantity} x {listing.item.name} from {listing.owner_name} "
+            f"for {_format_price(total_price)} gp? Confirming records the sale and removes this listing. "
+            "No app-managed gold will be deducted or stored."
         )
         return True, listing.id, message
