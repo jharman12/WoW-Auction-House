@@ -919,6 +919,109 @@ h1 {
     }
 }
 
+.simulation-panel {
+    margin: 28px 0 42px;
+    padding: 22px 24px;
+    border: 1px solid #554b39;
+    background: linear-gradient(125deg, rgb(55 47 35 / 68%), rgb(26 31 28 / 94%));
+}
+
+.simulation-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.simulation-setting {
+    min-width: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.simulation-setting > label,
+.simulation-toggle-label {
+    color: #c4c6bc;
+    font: 11px/1.5 "Trebuchet MS", sans-serif;
+}
+
+.simulation-setting input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #554b39;
+    border-radius: 0;
+    background: #171b18;
+    color: var(--ink);
+    font: 13px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.simulation-toggle-label {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+}
+
+.simulation-toggle label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+}
+
+.simulation-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--moss);
+}
+
+.intensity-setting {
+    min-height: 60px;
+}
+
+.intensity-setting .rc-slider {
+    margin: 12px 8px 8px;
+}
+
+.intensity-setting .rc-slider-track {
+    background-color: var(--moss);
+}
+
+.intensity-setting .rc-slider-handle {
+    border-color: var(--gold);
+    background: #1b211d;
+}
+
+.intensity-setting .rc-slider-mark-text {
+    color: var(--muted);
+    font: 10px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.simulation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+    .simulation-settings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .simulation-panel {
+        padding: 17px 14px;
+    }
+
+    .simulation-settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 390px) {
     .market-filters {
         grid-template-columns: 1fr;

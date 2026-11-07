@@ -1,5 +1,5 @@
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -16,9 +16,11 @@ class Settings(BaseSettings):
     port: int = Field(default=8050, ge=1, le=65535)
     database_path: Path = PROJECT_ROOT / "instance" / "auction_house.db"
     marketplace_poll_interval_ms: int = Field(default=7000, ge=1000)
-    npc_simulation_enabled: bool = False
+    npc_simulation_enabled: bool = True
     npc_simulation_interval_seconds: int = Field(default=300, ge=1)
+    npc_activity_intensity: Decimal = Field(default=Decimal("0.35"), ge=0, le=1)
     max_npc_listings: int = Field(default=100, ge=0)
+    max_npc_new_listings_per_cycle: int = Field(default=5, ge=0)
     max_npc_transactions_per_cycle: int = Field(default=10, ge=0)
     default_listing_expiration_days: int = Field(default=14, ge=1)
     minimum_price_multiplier: float = Field(default=0.25, gt=0)

@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from app import create_app
 from config import PROJECT_ROOT, Settings
 from database.connection import make_engine, make_session_factory
-from database.models import Listing, MarketHistory, Transaction
+from database.models import AppSetting, Listing, MarketHistory, Transaction
 from services.catalog_service import load_item_catalog
 from services.listing_service import create_player_listing
 
@@ -150,6 +150,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
         ("market-sort", "value"): "name",
         ("market-poll", "n_intervals"): 0,
         ("listing-refresh-token", "data"): 1,
+        ("npc-simulation-refresh-token", "data"): 0,
         ("market-previous", "n_clicks"): 0,
         ("market-next", "n_clicks"): 0,
     }
@@ -447,3 +448,54 @@ def test_player_listing_preview_shows_non_binding_market_estimate(tmp_path: Path
     assert response.status_code == 200
     assert "Market estimate:" in response.get_data(as_text=True)
     assert "Your asking price is not changed." in response.get_data(as_text=True)
+
+
+def test_dm_can_persist_simulation_settings_and_run_manual_cycle(tmp_path: Path) -> None:
+    database_path = tmp_path / "auction_house.db"
+    app = create_app(Settings(database_path=database_path, log_path=tmp_path / "app.log"))
+    client = app.server.test_client()
+    callback_key = next(key for key in app.callback_map if "npc-simulation-feedback.children" in key)
+    inputs = {
+        ("save-npc-settings", "n_clicks"): 1,
+        ("run-npc-cycle", "n_clicks"): 0,
+    }
+    states = {
+        ("npc-simulation-enabled", "value"): [],
+        ("npc-simulation-interval", "value"): 900,
+        ("npc-activity-intensity", "value"): 0.8,
+        ("npc-max-active-listings", "value"): 20,
+        ("npc-max-transactions", "value"): 3,
+        ("npc-max-new-listings", "value"): 2,
+        ("npc-simulation-refresh-token", "data"): 0,
+    }
+
+    saved = _run_callback(client, app, callback_key, inputs, states, ["save-npc-settings.n_clicks"])
+
+    assert saved.status_code == 200
+    assert "NPC simulation paused; settings saved." in saved.get_data(as_text=True)
+    engine = make_engine(database_path)
+    try:
+        with engine.connect() as connection:
+            stored = connection.execute(
+                select(AppSetting.value).where(AppSetting.key == "npc_simulation")
+            ).scalar_one()
+        stored_settings = json.loads(stored)
+        assert stored_settings["enabled"] is False
+        assert stored_settings["interval_seconds"] == 900
+        assert stored_settings["max_transactions_per_cycle"] == 3
+
+        inputs[("save-npc-settings", "n_clicks")] = 0
+        inputs[("run-npc-cycle", "n_clicks")] = 1
+        states[("npc-simulation-refresh-token", "data")] = 1
+        manual_result = _run_callback(
+            client,
+            app,
+            callback_key,
+            inputs,
+            states,
+            ["run-npc-cycle.n_clicks"],
+        )
+        assert manual_result.status_code == 200
+        assert "Cycle complete:" in manual_result.get_data(as_text=True)
+    finally:
+        engine.dispose()

@@ -1,6 +1,6 @@
 # WoW Auction House
 
-A local-network auction house for a D&D campaign. Phase 3 provides
+A local-network auction house for a D&D campaign. Phase 5 provides
 editable JSON catalogs, Player/DM navigation, a shared Player/NPC market,
 listing management, item details, atomic purchases, and transaction
 history with player sale proceeds.
@@ -64,9 +64,15 @@ Configuration is read from environment variables prefixed with `AUCTION_`:
 | `AUCTION_ECONOMY_PRICE_ROUNDING_INCREMENT` | `1` | Price rounding denomination in gold pieces |
 | `AUCTION_ECONOMY_UPDATE_INTERVAL_MINUTES` | `60` | Scheduled price recalculation interval |
 | `AUCTION_MARKET_HISTORY_INTERVAL_MINUTES` | `60` | Scheduled history snapshot interval |
+| `AUCTION_NPC_SIMULATION_ENABLED` | `true` | Default scheduled NPC simulation state |
+| `AUCTION_NPC_SIMULATION_INTERVAL_SECONDS` | `300` | NPC cycle interval |
+| `AUCTION_NPC_ACTIVITY_INTENSITY` | `0.35` | Default NPC activity probability scale |
+| `AUCTION_MAX_NPC_LISTINGS` | `100` | Maximum active NPC listings |
+| `AUCTION_MAX_NPC_NEW_LISTINGS_PER_CYCLE` | `5` | Maximum NPC listings generated per cycle |
+| `AUCTION_MAX_NPC_TRANSACTIONS_PER_CYCLE` | `10` | Maximum NPC purchases per cycle |
 
-Other simulation defaults are centralized in `config.py`; NPC background
-simulation remains a later phase.
+The DM's simulation settings are stored in SQLite and override these
+startup defaults after they are saved in the dashboard.
 
 ## Marketplace
 
@@ -78,11 +84,22 @@ manage a gold balance. Listings expire after the configured
 Expired and cancelled listings remain in SQLite, and expired listings
 are moved out of the active market when it refreshes.
 
-The campaign's initial NPC stock is in `data/npc_market_seed.json`.
-Startup seeds those NPCs and listings once; restarting the app does not
-duplicate them or recreate listings that have been cancelled. This is
-static sample stock, not the scheduled NPC simulation planned for a
-later phase. The DM view can cancel any active listing.
+The campaign's initial NPC stock and buyer/seller preferences are in
+`data/npc_market_seed.json`. Startup seeds those NPCs and listings once;
+restarting the app does not duplicate them or recreate listings that have
+been cancelled. The DM view can cancel any active listing.
+
+## NPC Simulation
+
+Scheduled NPC cycles generate listings from the local catalog and let
+active NPC buyers evaluate player and NPC listings. Each NPC uses its
+preferred categories/rarities, purchase probability, price ceiling,
+per-cycle budget, and seller activity settings. Simulated purchases use
+the same atomic auction service and appear in the transaction ledger.
+Activity intensity and per-cycle/active-listing caps are configurable in
+the DM dashboard. Settings persist in SQLite. **Run cycle now** triggers
+one bounded cycle even while scheduled simulation is paused. NPC budgets
+are simulation limits, not player wallets; no player gold is managed.
 
 ## Purchases And Sales
 

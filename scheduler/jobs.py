@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from config import Settings
 from services.catalog_service import CatalogItem
 from services.economy_service import snapshot_market_history, update_market_prices
+from services.npc_simulation_service import NpcSimulationSettings, run_npc_simulation_cycle
 
 
 logger = logging.getLogger(__name__)
@@ -32,11 +33,31 @@ def _snapshot_history(session_factory: sessionmaker[Session]) -> None:
         logger.exception("Scheduled market history snapshot failed")
 
 
+def _run_npc_cycle(
+    session_factory: sessionmaker[Session],
+    items: Sequence[CatalogItem],
+    settings: Settings,
+) -> None:
+    try:
+        run_npc_simulation_cycle(session_factory, list(items), settings)
+    except Exception:
+        logger.exception("Scheduled NPC simulation failed")
+
+
 def create_economy_scheduler(
     session_factory: sessionmaker[Session],
     items: Sequence[CatalogItem],
     settings: Settings,
+    npc_settings: NpcSimulationSettings | None = None,
 ) -> BackgroundScheduler:
+    npc_settings = npc_settings or NpcSimulationSettings(
+        enabled=settings.npc_simulation_enabled,
+        interval_seconds=settings.npc_simulation_interval_seconds,
+        activity_intensity=settings.npc_activity_intensity,
+        max_active_listings=settings.max_npc_listings,
+        max_transactions_per_cycle=settings.max_npc_transactions_per_cycle,
+        max_new_listings_per_cycle=settings.max_npc_new_listings_per_cycle,
+    )
     scheduler = BackgroundScheduler(
         timezone="UTC",
         executors={"default": {"type": "threadpool", "max_workers": 1}},
@@ -58,6 +79,15 @@ def create_economy_scheduler(
         id="market-history-snapshot",
         name="Record market price history",
         args=[session_factory],
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _run_npc_cycle,
+        trigger="interval",
+        seconds=npc_settings.interval_seconds,
+        id="npc-simulation-cycle",
+        name="Run NPC marketplace cycle",
+        args=[session_factory, list(items), settings],
         replace_existing=True,
     )
     return scheduler

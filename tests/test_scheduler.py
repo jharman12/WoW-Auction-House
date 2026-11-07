@@ -5,6 +5,7 @@ from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
 from scheduler.jobs import create_economy_scheduler
 from services.catalog_service import load_item_catalog
+from services.npc_simulation_service import NpcSimulationSettings
 
 
 def test_economy_jobs_use_configured_intervals(tmp_path) -> None:
@@ -21,10 +22,17 @@ def test_economy_jobs_use_configured_intervals(tmp_path) -> None:
         PROJECT_ROOT / "assets" / "images" / "items",
     )
 
-    scheduler = create_economy_scheduler(make_session_factory(engine), items, settings)
+    npc_settings = NpcSimulationSettings(enabled=True, interval_seconds=720)
+    scheduler = create_economy_scheduler(
+        make_session_factory(engine),
+        items,
+        settings,
+        npc_settings,
+    )
     jobs = {job.id: job for job in scheduler.get_jobs()}
 
     assert jobs["economy-price-update"].trigger.interval == timedelta(minutes=17)
     assert jobs["market-history-snapshot"].trigger.interval == timedelta(minutes=29)
+    assert jobs["npc-simulation-cycle"].trigger.interval == timedelta(seconds=720)
     assert scheduler._job_defaults["max_instances"] == 1
     engine.dispose()

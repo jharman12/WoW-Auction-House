@@ -1,3 +1,4 @@
+import json
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -47,11 +48,26 @@ class NpcSeedListing(BaseModel):
     asking_price: Decimal = Field(gt=Decimal("0"))
 
 
+class NpcPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    preferred_categories: list[str] = Field(default_factory=list)
+    preferred_rarities: list[str] = Field(default_factory=list)
+    buyer_purchase_probability: float = Field(default=0.25, ge=0, le=1)
+    buyer_price_ceiling_multiplier: Decimal = Field(default=Decimal("1.2"), gt=0, le=Decimal("10"))
+    buyer_budget_per_cycle: Decimal = Field(default=Decimal("250"), ge=0)
+    seller_listing_probability: float = Field(default=0.3, ge=0, le=1)
+    seller_price_spread: float = Field(default=0.15, ge=0, le=0.75)
+
+
 class NpcSellerSeed(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=120)
     archetype: str = Field(min_length=1, max_length=120)
+    is_buyer: bool = True
+    is_seller: bool = True
+    preferences: NpcPreferences = Field(default_factory=NpcPreferences)
     listings: list[NpcSeedListing] = Field(min_length=1)
 
 
@@ -228,9 +244,17 @@ def seed_npc_marketplace(
         for seller in seed.sellers:
             npc = session.scalar(select(NPC).where(NPC.name == seller.name))
             if npc is None:
-                npc = NPC(name=seller.name, archetype=seller.archetype, is_buyer=True, is_seller=True)
+                npc = NPC(name=seller.name, archetype=seller.archetype)
                 session.add(npc)
                 session.flush()
+            npc.archetype = seller.archetype
+            npc.is_buyer = seller.is_buyer
+            npc.is_seller = seller.is_seller
+            npc.preferences_json = json.dumps(
+                seller.preferences.model_dump(mode="json"),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
 
             existing_listing_id = session.scalar(
                 select(Listing.id).where(Listing.npc_id == npc.id).limit(1)

@@ -4,6 +4,7 @@ from urllib.parse import quote, unquote
 from dash import dcc, html
 
 from services.catalog_service import CatalogItem, CharacterDefinition
+from services.npc_simulation_service import NpcSimulationSettings
 
 
 def _masthead(section: str, action: str | None = None, href: str | None = None) -> html.Header:
@@ -119,7 +120,9 @@ def _marketplace_workspace(
     items: list[CatalogItem],
     poll_interval_ms: int,
     show_listing_form: bool,
+    simulation_settings: NpcSimulationSettings | None = None,
 ) -> html.Div:
+    simulation_settings = simulation_settings or NpcSimulationSettings()
     enabled_items = [item for item in items if item.enabled]
     categories = sorted({item.category for item in enabled_items})
     rarities = sorted({item.rarity for item in enabled_items})
@@ -208,15 +211,126 @@ def _marketplace_workspace(
         if not show_listing_form
         else None
     )
+    simulation_panel = (
+        html.Section(
+            [
+                html.Div(
+                    [
+                        html.P("SIMULATION", className="eyebrow"),
+                        html.H2("NPC marketplace"),
+                    ],
+                    className="section-heading",
+                ),
+                html.Div(
+                    [
+                        html.Label(
+                            dcc.Checklist(
+                                id="npc-simulation-enabled",
+                                options=[{"label": "Scheduled simulation enabled", "value": "enabled"}],
+                                value=["enabled"] if simulation_settings.enabled else [],
+                                className="simulation-toggle",
+                            ),
+                            className="simulation-toggle-label",
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Cycle interval (seconds)", htmlFor="npc-simulation-interval"),
+                                dcc.Input(
+                                    id="npc-simulation-interval",
+                                    type="number",
+                                    min=30,
+                                    max=86400,
+                                    step=30,
+                                    value=simulation_settings.interval_seconds,
+                                ),
+                            ],
+                            className="simulation-setting",
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Activity intensity", htmlFor="npc-activity-intensity"),
+                                dcc.Slider(
+                                    id="npc-activity-intensity",
+                                    min=0,
+                                    max=1,
+                                    step=0.05,
+                                    value=float(simulation_settings.activity_intensity),
+                                    marks={0: "0", 0.5: "0.5", 1: "1"},
+                                    tooltip={"placement": "bottom", "always_visible": False},
+                                ),
+                            ],
+                            className="simulation-setting intensity-setting",
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Max active NPC listings", htmlFor="npc-max-active-listings"),
+                                dcc.Input(
+                                    id="npc-max-active-listings",
+                                    type="number",
+                                    min=0,
+                                    max=5000,
+                                    step=1,
+                                    value=simulation_settings.max_active_listings,
+                                ),
+                            ],
+                            className="simulation-setting",
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Max transactions per cycle", htmlFor="npc-max-transactions"),
+                                dcc.Input(
+                                    id="npc-max-transactions",
+                                    type="number",
+                                    min=0,
+                                    max=100,
+                                    step=1,
+                                    value=simulation_settings.max_transactions_per_cycle,
+                                ),
+                            ],
+                            className="simulation-setting",
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Max new listings per cycle", htmlFor="npc-max-new-listings"),
+                                dcc.Input(
+                                    id="npc-max-new-listings",
+                                    type="number",
+                                    min=0,
+                                    max=100,
+                                    step=1,
+                                    value=simulation_settings.max_new_listings_per_cycle,
+                                ),
+                            ],
+                            className="simulation-setting",
+                        ),
+                    ],
+                    className="simulation-settings-grid",
+                ),
+                html.Div(
+                    [
+                        html.Button("Save settings", id="save-npc-settings", n_clicks=0, className="quiet-button"),
+                        html.Button("Run cycle now", id="run-npc-cycle", n_clicks=0, className="action-button"),
+                    ],
+                    className="simulation-actions",
+                ),
+                html.P(id="npc-simulation-feedback", className="listing-feedback", role="status"),
+            ],
+            className="simulation-panel",
+        )
+        if not show_listing_form
+        else None
+    )
 
     return html.Div(
         [
             dcc.Interval(id="market-poll", interval=poll_interval_ms, n_intervals=0),
             dcc.Store(id="listing-refresh-token", data=0),
+            dcc.Store(id="npc-simulation-refresh-token", data=0),
             dcc.Store(id="listing-page", data=1),
             dcc.Store(id="purchase-listing-id"),
             dcc.ConfirmDialog(id="purchase-confirmation", displayed=False),
             economy_panel,
+            simulation_panel,
             listing_form,
             html.P(id="listing-feedback", className="listing-feedback", role="status"),
             html.Section(
@@ -350,6 +464,7 @@ def dm_dashboard_page(
     items: list[CatalogItem],
     character_count: int,
     poll_interval_ms: int,
+    simulation_settings: NpcSimulationSettings,
 ) -> html.Div:
     return html.Div(
         [
@@ -376,7 +491,12 @@ def dm_dashboard_page(
                         ],
                         className="metric-grid",
                     ),
-                    _marketplace_workspace(items, poll_interval_ms, show_listing_form=False),
+                    _marketplace_workspace(
+                        items,
+                        poll_interval_ms,
+                        show_listing_form=False,
+                        simulation_settings=simulation_settings,
+                    ),
                 ],
                 className="content-page",
             ),
@@ -407,13 +527,14 @@ def resolve_page(
     items: list[CatalogItem],
     characters: list[CharacterDefinition],
     poll_interval_ms: int,
+    simulation_settings: NpcSimulationSettings,
 ) -> html.Div:
     if pathname in (None, "", "/"):
         return landing_page()
     if pathname == "/characters":
         return character_selection_page(characters)
     if pathname == "/dm":
-        return dm_dashboard_page(items, len(characters), poll_interval_ms)
+        return dm_dashboard_page(items, len(characters), poll_interval_ms, simulation_settings)
     if pathname.startswith("/player/"):
         character_id = unquote(pathname.removeprefix("/player/"))
         character = next((entry for entry in characters if entry.id == character_id), None)

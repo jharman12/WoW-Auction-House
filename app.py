@@ -4,6 +4,7 @@ from dash import Dash, dcc, html
 
 from callbacks.navigation import register_navigation
 from callbacks.marketplace import register_marketplace_callbacks
+from callbacks.simulation import register_simulation_callbacks
 from config import PROJECT_ROOT, Settings
 from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
@@ -14,6 +15,10 @@ from services.catalog_service import load_characters, load_item_catalog
 from services.character_service import sync_characters
 from services.economy_service import ensure_initial_market_prices
 from services.listing_service import load_npc_market_seed, seed_npc_marketplace
+from services.npc_simulation_service import (
+    default_npc_simulation_settings,
+    load_npc_simulation_settings,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,10 @@ def create_app(settings: Settings | None = None) -> Dash:
             settings.default_listing_expiration_days,
         )
         ensure_initial_market_prices(session_factory, item_catalog, settings)
+        simulation_settings = load_npc_simulation_settings(
+            session_factory,
+            default_npc_simulation_settings(settings),
+        )
     except Exception as exc:
         if "engine" in locals():
             engine.dispose()
@@ -61,11 +70,21 @@ def create_app(settings: Settings | None = None) -> Dash:
             html.Div(landing_page(), id="page-content"),
         ]
     )
-    register_navigation(app, item_catalog, characters, settings.marketplace_poll_interval_ms)
+    scheduler = create_economy_scheduler(session_factory, item_catalog, settings, simulation_settings)
+    register_navigation(
+        app,
+        item_catalog,
+        characters,
+        settings.marketplace_poll_interval_ms,
+        simulation_settings,
+    )
     register_marketplace_callbacks(app, item_catalog, session_factory, settings)
+    register_simulation_callbacks(app, session_factory, item_catalog, settings, scheduler)
     app.server.config["AUCTION_HOUSE_ITEMS"] = item_catalog
     app.server.config["AUCTION_HOUSE_SESSION_FACTORY"] = session_factory
     app.server.config["AUCTION_HOUSE_SETTINGS"] = settings
+    app.server.config["AUCTION_HOUSE_SIMULATION_SETTINGS"] = simulation_settings
+    app.server.config["AUCTION_HOUSE_SCHEDULER"] = scheduler
     return app
 
 
@@ -78,11 +97,7 @@ def main() -> None:
     scheduler = None
     try:
         app = create_app(settings)
-        scheduler = create_economy_scheduler(
-            app.server.config["AUCTION_HOUSE_SESSION_FACTORY"],
-            app.server.config["AUCTION_HOUSE_ITEMS"],
-            app.server.config["AUCTION_HOUSE_SETTINGS"],
-        )
+        scheduler = app.server.config["AUCTION_HOUSE_SCHEDULER"]
         scheduler.start()
         app.run(host=settings.host, port=settings.port, debug=False, use_reloader=False)
     except OSError as exc:

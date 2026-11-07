@@ -3,6 +3,15 @@
     {
       "name": "Mara's Wayfarer Goods",
       "archetype": "Traveling Trader",
+      "preferences": {
+        "preferred_categories": ["adventuring_gear", "consumable"],
+        "preferred_rarities": ["common", "uncommon"],
+        "buyer_purchase_probability": 0.3,
+        "buyer_price_ceiling_multiplier": 1.15,
+        "buyer_budget_per_cycle": 140,
+        "seller_listing_probability": 0.55,
+        "seller_price_spread": 0.12
+      },
       "listings": [
         {"item_id": "trail-ration-pack", "quantity": 6, "asking_price": 4},
         {"item_id": "redleaf-tonic", "quantity": 2, "asking_price": 15}
@@ -11,6 +20,15 @@
     {
       "name": "Old Renn's Armory",
       "archetype": "Weapons Dealer",
+      "preferences": {
+        "preferred_categories": ["weapon", "armor"],
+        "preferred_rarities": ["common", "uncommon", "rare"],
+        "buyer_purchase_probability": 0.25,
+        "buyer_price_ceiling_multiplier": 1.2,
+        "buyer_budget_per_cycle": 420,
+        "seller_listing_probability": 0.7,
+        "seller_price_spread": 0.18
+      },
       "listings": [
         {"item_id": "ironbound-shortsword", "quantity": 1, "asking_price": 13},
         {"item_id": "ashwood-buckler", "quantity": 1, "asking_price": 11}
@@ -19,6 +37,15 @@
     {
       "name": "Lumen & Root",
       "archetype": "Curio Merchant",
+      "preferences": {
+        "preferred_categories": ["magic_item", "material"],
+        "preferred_rarities": ["uncommon", "rare", "very_rare"],
+        "buyer_purchase_probability": 0.35,
+        "buyer_price_ceiling_multiplier": 1.35,
+        "buyer_budget_per_cycle": 1200,
+        "seller_listing_probability": 0.4,
+        "seller_price_spread": 0.25
+      },
       "listings": [
         {"item_id": "witchlight-lantern", "quantity": 1, "asking_price": 92},
         {"item_id": "moonstone-dust", "quantity": 3, "asking_price": 34},
