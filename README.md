@@ -1,8 +1,9 @@
 # WoW Auction House
 
-A local-network auction house for a D&D campaign. This repository is at
-Phase 0: the application foundation is in place; marketplace features are
-not implemented yet.
+A local-network auction house for a D&D campaign. Phase 1 provides the
+application foundation, editable JSON catalogs, character selection, and
+the initial Player and DM views. Marketplace listings and transactions
+are planned for later phases.
 
 ## Requirements
 
@@ -54,7 +55,49 @@ Configuration is read from environment variables prefixed with `AUCTION_`:
 | `AUCTION_LOG_PATH` | `logs/auction_house.log` | Log file path |
 
 Other simulation and economy defaults are centralized in `config.py` for
-later phases. They do not activate background jobs in Phase 0.
+later phases. They do not activate background jobs yet.
+
+## Catalog Data
+
+Edit `data/item_catalog.json` to add or change items. The root object has
+one `items` array. Every item requires a stable `id`, `name`, `category`,
+`rarity`, positive `base_price`, and `description`. `base_price` is in
+gold pieces. Optional fields are `image`, `stackable`, `properties`,
+`tags`, and `enabled`.
+
+The sample uses categories `weapon`, `armor`, `adventuring_gear`,
+`consumable`, `magic_item`, and `material`; common rarity values include
+`common`, `uncommon`, `rare`, `very_rare`, `legendary`, and `artifact`.
+Campaign-defined categories and rarities are also accepted as lowercase
+slugs such as `relic` or `mythic`. Item IDs must be unique, lowercase
+URL-friendly values; keep them unchanged when renaming an item so future
+listing history can continue to refer to it.
+
+An image is optional. When provided, set `image` to a relative filename
+under `assets/images/items/`, for example `ironbound-shortsword.png`.
+Missing files are logged and use the built-in placeholder. Character
+definitions are in `data/characters.json`; character images use
+`assets/images/characters/`. The included items and characters are
+original sample data intended to demonstrate the structure and can be
+replaced with campaign content.
+
+Example item:
+
+```json
+{
+	"id": "ironbound-shortsword",
+	"name": "Ironbound Shortsword",
+	"category": "weapon",
+	"rarity": "common",
+	"base_price": 10,
+	"description": "A practical blade with a leather-wrapped grip.",
+	"image": null,
+	"stackable": false,
+	"properties": {"damage": "1d6 piercing", "weight_lb": 2},
+	"tags": ["melee", "martial"],
+	"enabled": true
+}
+```
 
 ## Database And Backups
 
@@ -72,5 +115,6 @@ python -m pytest
 ```
 
 The tests cover configuration validation, database migration and
-persistence, and the basic Dash response. LAN reachability from a second
-device must be verified on the campaign network.
+persistence, catalog and character validation, route navigation, and the
+basic Dash response. LAN reachability from a second device must be
+verified on the campaign network.

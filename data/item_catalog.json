@@ -1,0 +1,137 @@
+{
+  "items": [
+    {
+      "id": "ironbound-shortsword",
+      "name": "Ironbound Shortsword",
+      "category": "weapon",
+      "rarity": "common",
+      "base_price": 10,
+      "description": "A practical blade with a leather-wrapped grip and a reinforced pommel.",
+      "image": null,
+      "stackable": false,
+      "properties": {
+        "damage": "1d6 piercing",
+        "weight_lb": 2
+      },
+      "tags": ["melee", "martial"],
+      "enabled": true
+    },
+    {
+      "id": "ashwood-buckler",
+      "name": "Ashwood Buckler",
+      "category": "armor",
+      "rarity": "common",
+      "base_price": 8,
+      "description": "A light wooden shield faced with thin bands of darkened iron.",
+      "image": null,
+      "stackable": false,
+      "properties": {
+        "armor_bonus": 2,
+        "weight_lb": 4
+      },
+      "tags": ["shield", "defense"],
+      "enabled": true
+    },
+    {
+      "id": "trail-ration-pack",
+      "name": "Trail Ration Pack",
+      "category": "adventuring_gear",
+      "rarity": "common",
+      "base_price": 3,
+      "description": "A day's worth of dried fruit, hard bread, and smoked river fish.",
+      "image": null,
+      "stackable": true,
+      "properties": {
+        "weight_lb": 2,
+        "servings": 1
+      },
+      "tags": ["travel", "food"],
+      "enabled": true
+    },
+    {
+      "id": "redleaf-tonic",
+      "name": "Redleaf Tonic",
+      "category": "consumable",
+      "rarity": "common",
+      "base_price": 12,
+      "description": "A sharp herbal drink sold in a sealed amber glass vial.",
+      "image": null,
+      "stackable": true,
+      "properties": {
+        "uses": 1,
+        "weight_lb": 0.5
+      },
+      "tags": ["potion", "herbal"],
+      "enabled": true
+    },
+    {
+      "id": "witchlight-lantern",
+      "name": "Witchlight Lantern",
+      "category": "magic_item",
+      "rarity": "uncommon",
+      "base_price": 75,
+      "description": "A hooded lantern whose pale flame glows without oil or smoke.",
+      "image": null,
+      "stackable": false,
+      "properties": {
+        "light_radius_ft": 20,
+        "weight_lb": 2,
+        "activation": {
+          "uses_per_day": 1,
+          "reset": "dawn"
+        }
+      },
+      "tags": ["light", "utility"],
+      "enabled": true
+    },
+    {
+      "id": "moonstone-dust",
+      "name": "Moonstone Dust",
+      "category": "material",
+      "rarity": "uncommon",
+      "base_price": 30,
+      "description": "Finely ground mineral that catches a faint blue sheen in low light.",
+      "image": null,
+      "stackable": true,
+      "properties": {
+        "weight_lb": 0.1,
+        "container": "paper packet"
+      },
+      "tags": ["crafting", "mineral"],
+      "enabled": true
+    },
+    {
+      "id": "stormglass-spear",
+      "name": "Stormglass Spear",
+      "category": "weapon",
+      "rarity": "rare",
+      "base_price": 250,
+      "description": "A slender spear with a translucent blue head that hums before a storm.",
+      "image": null,
+      "stackable": false,
+      "properties": {
+        "damage": "1d6 piercing",
+        "weight_lb": 3,
+        "attunement": false
+      },
+      "tags": ["melee", "magic"],
+      "enabled": true
+    },
+    {
+      "id": "hollow-star-mantle",
+      "name": "Mantle of the Hollow Star",
+      "category": "magic_item",
+      "rarity": "very_rare",
+      "base_price": 1200,
+      "description": "A midnight-blue mantle embroidered with a constellation that is not on any chart.",
+      "image": null,
+      "stackable": false,
+      "properties": {
+        "attunement": true,
+        "weight_lb": 1
+      },
+      "tags": ["wondrous", "attunement"],
+      "enabled": true
+    }
+  ]
+}

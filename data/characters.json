@@ -1,0 +1,25 @@
+{
+  "characters": [
+    {
+      "id": "mira-coppervale",
+      "name": "Mira Coppervale",
+      "class_label": "Artificer",
+      "description": "A patient craftswoman who trusts a well-made tool more than a lucky charm.",
+      "image": null
+    },
+    {
+      "id": "tovan-reed",
+      "name": "Tovan Reed",
+      "class_label": "Warden",
+      "description": "A quiet trail guide with a habit of noticing what others leave behind.",
+      "image": null
+    },
+    {
+      "id": "elira-moss",
+      "name": "Elira Moss",
+      "class_label": "Wayfarer",
+      "description": "A bright-eyed traveler who collects maps, rumors, and unusual keepsakes.",
+      "image": null
+    }
+  ]
+}

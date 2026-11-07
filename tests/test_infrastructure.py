@@ -28,7 +28,8 @@ def test_app_runs_migrations_and_preserves_database(tmp_path: Path) -> None:
     assert response.status_code == 200
     layout_response = first_client.get("/_dash-layout")
     assert layout_response.status_code == 200
-    assert b"Phase 0 foundation is running." in layout_response.data
+    assert b'"Player"' in layout_response.data
+    assert b'"DM"' in layout_response.data
 
     engine = make_engine(database_path)
     session_factory = make_session_factory(engine)

@@ -1,10 +1,15 @@
 import logging
 
-from dash import Dash, html
+from dash import Dash, dcc, html
 
-from config import Settings
+from callbacks.navigation import register_navigation
+from config import PROJECT_ROOT, Settings
+from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
+from layouts.pages import landing_page
 from logging_config import configure_logging
+from services.catalog_service import load_characters, load_item_catalog
+from services.character_service import sync_characters
 
 
 logger = logging.getLogger(__name__)
@@ -12,20 +17,38 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> Dash:
     settings = settings or Settings()
+    item_catalog = load_item_catalog(
+        PROJECT_ROOT / "data" / "item_catalog.json",
+        PROJECT_ROOT / "assets" / "images" / "items",
+    )
+    characters = load_characters(
+        PROJECT_ROOT / "data" / "characters.json",
+        PROJECT_ROOT / "assets" / "images" / "characters",
+    )
+
     try:
         upgrade_database(settings.database_path)
+        engine = make_engine(settings.database_path)
+        try:
+            sync_characters(characters, make_session_factory(engine))
+        finally:
+            engine.dispose()
     except Exception as exc:
         raise RuntimeError(f"Unable to initialize database at {settings.database_path}") from exc
 
-    app = Dash(__name__, title="WoW Auction House")
-    app.layout = html.Main(
-        [
-            html.P("D&D CAMPAIGN MARKETPLACE", className="eyebrow"),
-            html.H1("Auction House"),
-            html.P("Phase 0 foundation is running.", className="status"),
-        ],
-        className="page-shell",
+    app = Dash(
+        __name__,
+        title="The Gilded Ledger",
+        assets_folder=str(PROJECT_ROOT / "assets"),
+        suppress_callback_exceptions=True,
     )
+    app.layout = html.Div(
+        [
+            dcc.Location(id="url", refresh=False),
+            html.Div(landing_page(), id="page-content"),
+        ]
+    )
+    register_navigation(app, item_catalog, characters)
     return app
 
 
