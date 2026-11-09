@@ -919,6 +919,152 @@ h1 {
     }
 }
 
+.market-layout {
+    display: grid;
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+}
+
+.market-category-sidebar {
+    min-width: 0;
+    padding: 17px 14px;
+    border: 1px solid var(--line);
+    background: rgb(20 26 23 / 84%);
+}
+
+.market-category-sidebar > .eyebrow {
+    margin-bottom: 12px;
+}
+
+.category-filter-tree {
+    display: grid;
+    gap: 2px;
+    margin-top: 6px;
+}
+
+.category-filter-node {
+    min-width: 0;
+    border-top: 1px solid rgb(57 65 58 / 68%);
+}
+
+.category-filter-summary {
+    padding: 10px 4px 8px;
+    color: var(--ink);
+    cursor: pointer;
+    font: 15px/1.35 Georgia, serif;
+}
+
+.category-filter-summary:hover {
+    color: var(--gold);
+}
+
+.category-filter-children {
+    display: grid;
+    gap: 2px;
+    padding-left: 10px;
+}
+
+.category-filter-node .category-filter-node {
+    border-top: 0;
+}
+
+.category-filter-node .category-filter-node > .category-filter-summary {
+    padding-top: 8px;
+    padding-bottom: 6px;
+    color: #c1c6b9;
+    font: 12px/1.4 "Trebuchet MS", sans-serif;
+}
+
+.category-filter-leaf {
+    padding-left: 8px;
+}
+
+.category-filter-button {
+    width: 100%;
+    min-height: 31px;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font: 11px/1.45 "Trebuchet MS", sans-serif;
+    text-align: left;
+}
+
+.category-filter-button:hover,
+.category-filter-button.selected {
+    border-color: rgb(199 162 99 / 45%);
+    background: rgb(199 162 99 / 9%);
+    color: #e6d4ad;
+}
+
+.all-category-filter {
+    margin-bottom: 4px;
+    color: var(--gold);
+}
+
+.market-results {
+    min-width: 0;
+}
+
+.market-results .market-filters {
+    grid-template-columns: minmax(180px, 1.6fr) repeat(2, minmax(130px, 1fr));
+    margin-top: 0;
+}
+
+.market-filter-label {
+    margin: -2px 0 10px;
+    color: var(--gold);
+    font: 11px/1.4 "Trebuchet MS", sans-serif;
+}
+
+@media (max-width: 900px) {
+    .market-layout {
+        grid-template-columns: minmax(170px, 200px) minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .market-results .market-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .market-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .market-category-sidebar {
+        padding: 13px;
+    }
+
+    .category-filter-tree {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 4px 12px;
+    }
+
+    .category-filter-node {
+        min-width: 0;
+    }
+
+    .category-filter-node .category-filter-node {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 390px) {
+    .category-filter-tree {
+        grid-template-columns: 1fr;
+    }
+
+    .market-results .market-filters {
+        grid-template-columns: 1fr;
+    }
+}
+
 .simulation-panel {
     margin: 28px 0 42px;
     padding: 22px 24px;

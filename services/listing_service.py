@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from database.models import Character, Listing, NPC
 from services.catalog_service import CatalogItem, CatalogDataError
+from services.category_taxonomy import CategoryFilterSelection
 
 
 logger = logging.getLogger(__name__)
@@ -367,6 +368,7 @@ def get_marketplace(
     sort_by: str = "newest",
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
+    filter_selection: CategoryFilterSelection | None = None,
 ) -> MarketplacePage:
     expire_listings(session_factory)
     page = max(1, page)
@@ -389,6 +391,15 @@ def get_marketplace(
         listing
         for listing in listings
         if (category == "all" or listing.item.category == category)
+        and (
+            filter_selection is None
+            or not filter_selection.categories
+            or listing.item.category in filter_selection.categories
+        )
+        and (
+            filter_selection is None
+            or all(tag in listing.item.tags for tag in filter_selection.required_tags)
+        )
         and (rarity == "all" or listing.item.rarity == rarity)
         and (
             not normalized_search

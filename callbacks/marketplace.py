@@ -16,6 +16,10 @@ from services.auction_service import (
     get_recent_transactions,
 )
 from services.catalog_service import CatalogItem
+from services.category_taxonomy import (
+    CategoryFilterDocument,
+    resolve_category_filter,
+)
 from services.economy_service import (
     MarketPriceView,
     get_current_market_prices,
@@ -308,10 +312,30 @@ def _empty_listings(message: str) -> html.Div:
 def register_marketplace_callbacks(
     app: Dash,
     items: list[CatalogItem],
+    category_filters: CategoryFilterDocument,
     session_factory: sessionmaker[Session],
     settings: Settings,
 ) -> None:
     items_by_id = {item.id: item for item in items}
+
+    @app.callback(
+        Output("market-category-filter-key", "data"),
+        Output("market-filter-label", "children"),
+        Input({"type": "market-category-filter", "filter_id": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def select_market_category(_clicks: list[int]):
+        if not _has_positive_click(_clicks):
+            return no_update, no_update
+        triggered_id = ctx.triggered_id
+        if not isinstance(triggered_id, dict) or triggered_id.get("type") != "market-category-filter":
+            return no_update, no_update
+        filter_id = str(triggered_id.get("filter_id", "all"))
+        selection = resolve_category_filter(category_filters, filter_id)
+        if filter_id != "all" and selection is None:
+            return "all", "All items"
+        label = "All items" if selection is None else " / ".join(selection.label_path)
+        return filter_id, label
 
     @app.callback(
         Output("market-listings", "children"),
@@ -321,7 +345,7 @@ def register_marketplace_callbacks(
         Output("listing-page", "data"),
         Output("transaction-history", "children"),
         Input("market-search", "value"),
-        Input("market-category", "value"),
+        Input("market-category-filter-key", "data"),
         Input("market-rarity", "value"),
         Input("market-sort", "value"),
         Input("market-poll", "n_intervals"),
@@ -334,7 +358,7 @@ def register_marketplace_callbacks(
     )
     def refresh_marketplace(
         search: str | None,
-        category: str | None,
+        category_filter_key: str | None,
         rarity: str | None,
         sort_by: str | None,
         _poll_count: int,
@@ -346,21 +370,22 @@ def register_marketplace_callbacks(
         current_page: int | None,
     ):
         page = max(1, current_page or 1)
-        if ctx.triggered_id in {"market-search", "market-category", "market-rarity", "market-sort"}:
+        if ctx.triggered_id in {"market-search", "market-category-filter-key", "market-rarity", "market-sort"}:
             page = 1
         elif ctx.triggered_id == "market-previous":
             page = max(1, page - 1)
         elif ctx.triggered_id == "market-next":
             page += 1
 
+        filter_selection = resolve_category_filter(category_filters, category_filter_key)
         results = get_marketplace(
             session_factory,
             items_by_id,
             search=search or "",
-            category=category or "all",
             rarity=rarity or "all",
             sort_by=sort_by or "newest",
             page=page,
+            filter_selection=filter_selection,
         )
         total_pages = max(1, (results.total_count + results.page_size - 1) // results.page_size)
         if page > total_pages:
@@ -369,10 +394,10 @@ def register_marketplace_callbacks(
                 session_factory,
                 items_by_id,
                 search=search or "",
-                category=category or "all",
                 rarity=rarity or "all",
                 sort_by=sort_by or "newest",
                 page=page,
+                filter_selection=filter_selection,
             )
 
         player_character_id = (

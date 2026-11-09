@@ -133,6 +133,16 @@ change the player's entered asking price.
 
 ## Catalog Data
 
+The app also loads `output/auction_house_items.json` when present, in
+addition to `data/item_catalog.json`. Set `AUCTION_ADDITIONAL_CATALOG_PATH`
+to use another generated catalog. Both sources are validated with the same
+schema; duplicate IDs across sources produce a startup error. Existing
+sample IDs remain available for historical listings and NPC seed references.
+Restart the app after generating more items. Imported items become available
+for player listing creation and NPC listing generation; import alone does
+not create active listings. Review AI-generated tags and categories manually,
+since schema validation cannot verify D&D rule accuracy.
+
 Edit `data/item_catalog.json` to add or change items. The root object has
 one `items` array. Every item requires a stable `id`, `name`, `category`,
 `rarity`, positive `base_price`, and `description`. `base_price` is in
@@ -154,6 +164,23 @@ definitions are in `data/characters.json`; character images use
 `assets/images/characters/`. The included items and characters are
 original sample data intended to demonstrate the structure and can be
 replaced with campaign content.
+
+## Marketplace Category Filters
+
+`data/marketplace_filters.json` defines the collapsible Player/DM category
+tree. Top-level entries filter by catalog `category`; nested groups and
+properties also require matching item tags. Add the listed tags to an
+item's `tags` array in `data/item_catalog.json` to make it appear under
+those branches. A nested selection requires every tag along its path, so
+**Weapons → Simple Ranged → Finesse** only matches items classified as
+both simple ranged and finesse.
+
+Tag prefixes follow the tree: weapon properties use `weapon:`, armor
+types use `armor:`, utility leaves use `utility:`, and potion types use
+`potion:`. For example, a simple melee thrown weapon can use
+`weapon:simple_melee` and `weapon:thrown`. The taxonomy and sample tags
+are editable locally; the filter tree does not alter canonical catalog
+item IDs or listing records.
 
 Example item:
 

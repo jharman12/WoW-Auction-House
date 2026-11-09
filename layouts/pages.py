@@ -3,6 +3,7 @@ from urllib.parse import quote, unquote
 
 from dash import dcc, html
 
+from services.category_taxonomy import CategoryFilterDocument, render_category_filter_tree
 from services.catalog_service import CatalogItem, CharacterDefinition
 from services.npc_simulation_service import NpcSimulationSettings
 
@@ -120,11 +121,11 @@ def _marketplace_workspace(
     items: list[CatalogItem],
     poll_interval_ms: int,
     show_listing_form: bool,
+    category_filters: CategoryFilterDocument,
     simulation_settings: NpcSimulationSettings | None = None,
 ) -> html.Div:
     simulation_settings = simulation_settings or NpcSimulationSettings()
     enabled_items = [item for item in items if item.enabled]
-    categories = sorted({item.category for item in enabled_items})
     rarities = sorted({item.rarity for item in enabled_items})
     listing_form = html.Section(
             [
@@ -327,6 +328,7 @@ def _marketplace_workspace(
             dcc.Store(id="listing-refresh-token", data=0),
             dcc.Store(id="npc-simulation-refresh-token", data=0),
             dcc.Store(id="listing-page", data=1),
+            dcc.Store(id="market-category-filter-key", data="all"),
             dcc.Store(id="purchase-listing-id"),
             dcc.ConfirmDialog(id="purchase-confirmation", displayed=False),
             economy_panel,
@@ -350,59 +352,79 @@ def _marketplace_workspace(
                     ),
                     html.Div(
                         [
-                            dcc.Input(
-                                id="market-search",
-                                type="search",
-                                placeholder="Search item names and tags",
-                                debounce=True,
-                                className="market-search",
-                            ),
-                            dcc.Dropdown(
-                                id="market-category",
-                                options=[{"label": "All categories", "value": "all"}]
-                                + [{"label": value.replace("_", " ").title(), "value": value} for value in categories],
-                                value="all",
-                                clearable=False,
-                                className="market-dropdown",
-                            ),
-                            dcc.Dropdown(
-                                id="market-rarity",
-                                options=[{"label": "All rarities", "value": "all"}]
-                                + [{"label": value.replace("_", " ").title(), "value": value} for value in rarities],
-                                value="all",
-                                clearable=False,
-                                className="market-dropdown",
-                            ),
-                            dcc.Dropdown(
-                                id="market-sort",
-                                options=[
-                                    {"label": "Newest", "value": "newest"},
-                                    {"label": "Oldest", "value": "oldest"},
-                                    {"label": "Price: low to high", "value": "price_asc"},
-                                    {"label": "Price: high to low", "value": "price_desc"},
-                                    {"label": "Item name", "value": "name"},
-                                    {"label": "Rarity", "value": "rarity"},
+                            html.Aside(
+                                [
+                                    html.P("BROWSE CATEGORIES", className="eyebrow"),
+                                    html.Button(
+                                        "All items",
+                                        id={"type": "market-category-filter", "filter_id": "all"},
+                                        n_clicks=0,
+                                        className="category-filter-button all-category-filter",
+                                    ),
+                                    html.Div(
+                                        render_category_filter_tree(category_filters.categories, "all"),
+                                        id="market-category-tree",
+                                        className="category-filter-tree",
+                                    ),
                                 ],
-                                value="newest",
-                                clearable=False,
-                                className="market-dropdown",
+                                className="market-category-sidebar",
+                            ),
+                            html.Div(
+                                [
+                                    html.Div(
+                                        [
+                                            dcc.Input(
+                                                id="market-search",
+                                                type="search",
+                                                placeholder="Search item names and tags",
+                                                debounce=True,
+                                                className="market-search",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="market-rarity",
+                                                options=[{"label": "All rarities", "value": "all"}]
+                                                + [{"label": value.replace("_", " ").title(), "value": value} for value in rarities],
+                                                value="all",
+                                                clearable=False,
+                                                className="market-dropdown",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="market-sort",
+                                                options=[
+                                                    {"label": "Newest", "value": "newest"},
+                                                    {"label": "Oldest", "value": "oldest"},
+                                                    {"label": "Price: low to high", "value": "price_asc"},
+                                                    {"label": "Price: high to low", "value": "price_desc"},
+                                                    {"label": "Item name", "value": "name"},
+                                                    {"label": "Rarity", "value": "rarity"},
+                                                ],
+                                                value="newest",
+                                                clearable=False,
+                                                className="market-dropdown",
+                                            ),
+                                        ],
+                                        className="market-filters",
+                                    ),
+                                    html.P("All items", id="market-filter-label", className="market-filter-label"),
+                                    html.Div("Loading active listings...", id="market-listings", className="listing-stack"),
+                                    html.Div(
+                                        [
+                                            html.Button("Previous", id="market-previous", n_clicks=0, className="quiet-button"),
+                                            html.Span("Page 1 of 1", id="market-page-label", className="market-page-label"),
+                                            html.Button("Next", id="market-next", n_clicks=0, className="quiet-button"),
+                                        ],
+                                        className="market-pagination",
+                                    ),
+                                    html.Section(
+                                        html.P("Select Inspect on a listing to view its details.", className="detail-empty"),
+                                        id="listing-details",
+                                        className="listing-details",
+                                    ),
+                                ],
+                                className="market-results",
                             ),
                         ],
-                        className="market-filters",
-                    ),
-                    html.Div("Loading active listings...", id="market-listings", className="listing-stack"),
-                    html.Div(
-                        [
-                            html.Button("Previous", id="market-previous", n_clicks=0, className="quiet-button"),
-                            html.Span("Page 1 of 1", id="market-page-label", className="market-page-label"),
-                            html.Button("Next", id="market-next", n_clicks=0, className="quiet-button"),
-                        ],
-                        className="market-pagination",
-                    ),
-                    html.Section(
-                        html.P("Select Inspect on a listing to view its details.", className="detail-empty"),
-                        id="listing-details",
-                        className="listing-details",
+                        className="market-layout",
                     ),
                 ],
                 className="market-section",
@@ -441,6 +463,7 @@ def _marketplace_workspace(
 def player_marketplace_page(
     character: CharacterDefinition,
     items: list[CatalogItem],
+    category_filters: CategoryFilterDocument,
     poll_interval_ms: int,
 ) -> html.Div:
     return html.Div(
@@ -451,7 +474,12 @@ def player_marketplace_page(
                     html.P(f"TRADING AS {character.name.upper()}", className="eyebrow"),
                     html.H1("Marketplace"),
                     html.P("Browse the campaign exchange or post an item from your inventory.", className="intro-copy"),
-                    _marketplace_workspace(items, poll_interval_ms, show_listing_form=True),
+                    _marketplace_workspace(
+                        items,
+                        poll_interval_ms,
+                        show_listing_form=True,
+                        category_filters=category_filters,
+                    ),
                 ],
                 className="content-page",
             ),
@@ -463,6 +491,7 @@ def player_marketplace_page(
 def dm_dashboard_page(
     items: list[CatalogItem],
     character_count: int,
+    category_filters: CategoryFilterDocument,
     poll_interval_ms: int,
     simulation_settings: NpcSimulationSettings,
 ) -> html.Div:
@@ -495,6 +524,7 @@ def dm_dashboard_page(
                         items,
                         poll_interval_ms,
                         show_listing_form=False,
+                        category_filters=category_filters,
                         simulation_settings=simulation_settings,
                     ),
                 ],
@@ -525,6 +555,7 @@ def not_found_page() -> html.Div:
 def resolve_page(
     pathname: str | None,
     items: list[CatalogItem],
+    category_filters: CategoryFilterDocument,
     characters: list[CharacterDefinition],
     poll_interval_ms: int,
     simulation_settings: NpcSimulationSettings,
@@ -534,10 +565,10 @@ def resolve_page(
     if pathname == "/characters":
         return character_selection_page(characters)
     if pathname == "/dm":
-        return dm_dashboard_page(items, len(characters), poll_interval_ms, simulation_settings)
+        return dm_dashboard_page(items, len(characters), category_filters, poll_interval_ms, simulation_settings)
     if pathname.startswith("/player/"):
         character_id = unquote(pathname.removeprefix("/player/"))
         character = next((entry for entry in characters if entry.id == character_id), None)
         if character is not None:
-            return player_marketplace_page(character, items, poll_interval_ms)
+            return player_marketplace_page(character, items, category_filters, poll_interval_ms)
     return not_found_page()

@@ -123,6 +123,19 @@ def load_item_catalog(path: Path, asset_root: Path) -> list[CatalogItem]:
     return cast(list[CatalogItem], entries)
 
 
+def load_application_catalog(primary_path: Path, additional_path: Path, asset_root: Path) -> list[CatalogItem]:
+    items = load_item_catalog(primary_path, asset_root)
+    if additional_path.exists():
+        imported = load_item_catalog(additional_path, asset_root)
+        existing_ids = {item.id for item in items}
+        duplicates = existing_ids.intersection(item.id for item in imported)
+        if duplicates:
+            raise CatalogDataError(f"Duplicate item IDs across catalog sources: {sorted(duplicates)}")
+        items.extend(imported)
+        logger.info("Loaded %s additional items from %s", len(imported), additional_path)
+    return items
+
+
 def load_characters(path: Path, asset_root: Path) -> list[CharacterDefinition]:
     document = _read_document(path, CharacterDocument, "character catalog")
     entries = _apply_image_fallback(document.characters, asset_root, "character")

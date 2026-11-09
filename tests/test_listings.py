@@ -10,6 +10,7 @@ from database.connection import make_engine, make_session_factory
 from database.migrations import upgrade_database
 from database.models import Character, Listing, NPC
 from services.catalog_service import CatalogDataError, load_item_catalog
+from services.category_taxonomy import load_category_filters, resolve_category_filter
 from services.listing_service import (
     InvalidListingError,
     ListingNotActiveError,
@@ -78,6 +79,20 @@ def test_market_filters_search_and_sort(market_database, items_by_id) -> None:
     assert filtered.total_count == 1
     assert filtered.listings[0].item.id == "redleaf-tonic"
     assert [listing.asking_price for listing in ascending.listings] == [Decimal("13.00"), Decimal("14.00")]
+
+
+def test_nested_weapon_filter_requires_the_selected_group_and_property(market_database, items_by_id) -> None:
+    create_player_listing(market_database, items_by_id, "mira-coppervale", "ironbound-shortsword", 1, 10, 14)
+    create_npc_listing(market_database, items_by_id, 1, "stormglass-spear", 1, 250, 14)
+    taxonomy = load_category_filters(PROJECT_ROOT / "data" / "marketplace_filters.json")
+    selection = resolve_category_filter(taxonomy, "weapons.simple-melee.thrown")
+
+    results = get_marketplace(market_database, items_by_id, filter_selection=selection)
+
+    assert selection is not None
+    assert selection.categories == ("weapon",)
+    assert selection.required_tags == ("weapon:simple_melee", "weapon:thrown")
+    assert [listing.item.id for listing in results.listings] == ["stormglass-spear"]
 
 
 def test_listing_validation_rejects_bad_owner_item_quantity_and_price(market_database, items_by_id) -> None:

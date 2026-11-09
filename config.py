@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = Field(default=8050, ge=1, le=65535)
     database_path: Path = PROJECT_ROOT / "instance" / "auction_house.db"
+    additional_catalog_path: Path = PROJECT_ROOT / "output" / "auction_house_items.json"
     marketplace_poll_interval_ms: int = Field(default=7000, ge=1000)
     npc_simulation_enabled: bool = True
     npc_simulation_interval_seconds: int = Field(default=300, ge=1)

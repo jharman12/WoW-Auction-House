@@ -13,7 +13,7 @@
         "damage": "1d6 piercing",
         "weight_lb": 2
       },
-      "tags": ["melee", "martial"],
+      "tags": ["melee", "martial", "weapon:martial_melee", "weapon:finesse", "weapon:light"],
       "enabled": true
     },
     {
@@ -29,7 +29,7 @@
         "armor_bonus": 2,
         "weight_lb": 4
       },
-      "tags": ["shield", "defense"],
+      "tags": ["shield", "defense", "armor:shield"],
       "enabled": true
     },
     {
@@ -61,7 +61,7 @@
         "uses": 1,
         "weight_lb": 0.5
       },
-      "tags": ["potion", "herbal"],
+      "tags": ["potion", "herbal", "potion:special"],
       "enabled": true
     },
     {
@@ -114,7 +114,7 @@
         "weight_lb": 3,
         "attunement": false
       },
-      "tags": ["melee", "magic"],
+      "tags": ["melee", "magic", "weapon:simple_melee", "weapon:thrown", "weapon:versatile"],
       "enabled": true
     },
     {

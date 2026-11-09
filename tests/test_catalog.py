@@ -88,3 +88,33 @@ def test_sample_characters_load() -> None:
 
     assert len(characters) == 3
     assert all(character.name and character.class_label for character in characters)
+
+
+def test_imported_catalog_works_for_app_listings_and_filters(tmp_path: Path) -> None:
+    from app import create_app
+    from config import Settings
+    from services.category_taxonomy import load_category_filters, resolve_category_filter
+    from services.listing_service import create_player_listing, get_marketplace
+
+    additional_path = tmp_path / "imported.json"
+    additional_path.write_text(json.dumps({"items": [{
+        "id": "srd-2024_test-battleaxe",
+        "name": "Imported Battleaxe",
+        "category": "weapon",
+        "rarity": "common",
+        "base_price": "10.00",
+        "description": "Imported weapon.",
+        "properties": {"source_document": {"key": "srd-2024"}},
+        "tags": ["weapon:martial_melee", "weapon:versatile"],
+    }]}), encoding="utf-8")
+    app = create_app(Settings(database_path=tmp_path / "market.db", additional_catalog_path=additional_path))
+    items = {item.id: item for item in app.server.config["AUCTION_HOUSE_ITEMS"]}
+    sessions = app.server.config["AUCTION_HOUSE_SESSION_FACTORY"]
+    assert len(items) == 9
+    assert items["srd-2024_test-battleaxe"].base_price == 10
+    assert "ironbound-shortsword" in items
+    listing_id = create_player_listing(sessions, items, "mira-coppervale", "srd-2024_test-battleaxe", 1, "12.50", 14)
+    taxonomy = load_category_filters(DATA_ROOT / "marketplace_filters.json")
+    selection = resolve_category_filter(taxonomy, "weapons.martial-melee.versatile")
+    results = get_marketplace(sessions, items, filter_selection=selection)
+    assert any(listing.id == listing_id for listing in results.listings)

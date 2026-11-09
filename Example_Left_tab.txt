@@ -1,0 +1,41 @@
+Weapons
+    Simple Melee 
+        Light
+        Finesse
+        Thrown
+        Two-Handed
+        Versatile
+    Simple Ranged
+        Ammunition
+        Finesse
+        Thrown
+    Martial Melee
+        Versatile
+        Heavy
+        Reach
+        Two-Handed
+        Special
+        Finesse
+        Light
+        Thrown
+    Martial Ranged
+        Ammunition
+        Light
+        Loading
+        Special
+        Heavy
+        Thrown
+
+Armor
+    Light
+    Medium
+    Heavy
+    Shield
+
+Utility Items
+    Magic 
+    Mounts
+    
+Potions
+    Healing
+    Special

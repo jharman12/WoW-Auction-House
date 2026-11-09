@@ -145,7 +145,7 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     market_key = next(key for key in app.callback_map if "market-listings.children" in key)
     market_inputs = {
         ("market-search", "value"): "",
-        ("market-category", "value"): "all",
+        ("market-category-filter-key", "data"): "all",
         ("market-rarity", "value"): "all",
         ("market-sort", "value"): "name",
         ("market-poll", "n_intervals"): 0,
@@ -180,8 +180,15 @@ def test_player_listing_is_visible_filterable_and_cancellable(tmp_path: Path) ->
     assert "A sharp herbal drink" in details_content
     assert "Uses" in details_content
 
-    market_inputs[("market-category", "value")] = "consumable"
-    filtered = _run_callback(client, app, market_key, market_inputs, market_states, ["market-category.value"])
+    market_inputs[("market-category-filter-key", "data")] = "potions"
+    filtered = _run_callback(
+        client,
+        app,
+        market_key,
+        market_inputs,
+        market_states,
+        ["market-category-filter-key.data"],
+    )
     filtered_content = json.dumps(filtered.get_json())
     assert "Redleaf Tonic" in filtered_content
     assert "Ironbound Shortsword" not in filtered_content
@@ -413,7 +420,8 @@ def test_dm_price_dashboard_records_and_charts_manual_updates(tmp_path: Path) ->
         ["market-update-prices.n_clicks"],
     )
     assert updated.status_code == 200
-    assert "Saved a price snapshot for 8 catalog items." in updated.get_data(as_text=True)
+    expected_count = len(app.server.config["AUCTION_HOUSE_ITEMS"])
+    assert f"Saved a price snapshot for {expected_count} catalog items." in updated.get_data(as_text=True)
 
     engine = make_engine(database_path)
     try:

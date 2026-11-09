@@ -1,0 +1,90 @@
+{
+  "categories": [
+    {
+      "id": "weapons",
+      "label": "Weapons",
+      "categories": ["weapon"],
+      "children": [
+        {
+          "id": "weapons.simple-melee",
+          "label": "Simple Melee",
+          "tag": "weapon:simple_melee",
+          "children": [
+            {"id": "weapons.simple-melee.light", "label": "Light", "tag": "weapon:light"},
+            {"id": "weapons.simple-melee.finesse", "label": "Finesse", "tag": "weapon:finesse"},
+            {"id": "weapons.simple-melee.thrown", "label": "Thrown", "tag": "weapon:thrown"},
+            {"id": "weapons.simple-melee.two-handed", "label": "Two-Handed", "tag": "weapon:two_handed"},
+            {"id": "weapons.simple-melee.versatile", "label": "Versatile", "tag": "weapon:versatile"}
+          ]
+        },
+        {
+          "id": "weapons.simple-ranged",
+          "label": "Simple Ranged",
+          "tag": "weapon:simple_ranged",
+          "children": [
+            {"id": "weapons.simple-ranged.ammunition", "label": "Ammunition", "tag": "weapon:ammunition"},
+            {"id": "weapons.simple-ranged.finesse", "label": "Finesse", "tag": "weapon:finesse"},
+            {"id": "weapons.simple-ranged.thrown", "label": "Thrown", "tag": "weapon:thrown"}
+          ]
+        },
+        {
+          "id": "weapons.martial-melee",
+          "label": "Martial Melee",
+          "tag": "weapon:martial_melee",
+          "children": [
+            {"id": "weapons.martial-melee.versatile", "label": "Versatile", "tag": "weapon:versatile"},
+            {"id": "weapons.martial-melee.heavy", "label": "Heavy", "tag": "weapon:heavy"},
+            {"id": "weapons.martial-melee.reach", "label": "Reach", "tag": "weapon:reach"},
+            {"id": "weapons.martial-melee.two-handed", "label": "Two-Handed", "tag": "weapon:two_handed"},
+            {"id": "weapons.martial-melee.special", "label": "Special", "tag": "weapon:special"},
+            {"id": "weapons.martial-melee.finesse", "label": "Finesse", "tag": "weapon:finesse"},
+            {"id": "weapons.martial-melee.light", "label": "Light", "tag": "weapon:light"},
+            {"id": "weapons.martial-melee.thrown", "label": "Thrown", "tag": "weapon:thrown"}
+          ]
+        },
+        {
+          "id": "weapons.martial-ranged",
+          "label": "Martial Ranged",
+          "tag": "weapon:martial_ranged",
+          "children": [
+            {"id": "weapons.martial-ranged.ammunition", "label": "Ammunition", "tag": "weapon:ammunition"},
+            {"id": "weapons.martial-ranged.light", "label": "Light", "tag": "weapon:light"},
+            {"id": "weapons.martial-ranged.loading", "label": "Loading", "tag": "weapon:loading"},
+            {"id": "weapons.martial-ranged.special", "label": "Special", "tag": "weapon:special"},
+            {"id": "weapons.martial-ranged.heavy", "label": "Heavy", "tag": "weapon:heavy"},
+            {"id": "weapons.martial-ranged.thrown", "label": "Thrown", "tag": "weapon:thrown"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "armor",
+      "label": "Armor",
+      "categories": ["armor"],
+      "children": [
+        {"id": "armor.light", "label": "Light", "tag": "armor:light"},
+        {"id": "armor.medium", "label": "Medium", "tag": "armor:medium"},
+        {"id": "armor.heavy", "label": "Heavy", "tag": "armor:heavy"},
+        {"id": "armor.shield", "label": "Shield", "tag": "armor:shield"}
+      ]
+    },
+    {
+      "id": "utility-items",
+      "label": "Utility Items",
+      "categories": ["magic_item", "adventuring_gear", "material", "tool"],
+      "children": [
+        {"id": "utility-items.magic", "label": "Magic", "categories": ["magic_item"]},
+        {"id": "utility-items.mounts", "label": "Mounts", "tag": "utility:mounts"}
+      ]
+    },
+    {
+      "id": "potions",
+      "label": "Potions",
+      "categories": ["consumable"],
+      "children": [
+        {"id": "potions.healing", "label": "Healing", "tag": "potion:healing"},
+        {"id": "potions.special", "label": "Special", "tag": "potion:special"}
+      ]
+    }
+  ]
+}

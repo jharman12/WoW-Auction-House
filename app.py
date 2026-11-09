@@ -11,7 +11,8 @@ from database.migrations import upgrade_database
 from layouts.pages import landing_page
 from logging_config import configure_logging
 from scheduler.jobs import create_economy_scheduler
-from services.catalog_service import load_characters, load_item_catalog
+from services.category_taxonomy import load_category_filters
+from services.catalog_service import load_application_catalog, load_characters
 from services.character_service import sync_characters
 from services.economy_service import ensure_initial_market_prices
 from services.listing_service import load_npc_market_seed, seed_npc_marketplace
@@ -26,14 +27,16 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> Dash:
     settings = settings or Settings()
-    item_catalog = load_item_catalog(
+    item_catalog = load_application_catalog(
         PROJECT_ROOT / "data" / "item_catalog.json",
+        settings.additional_catalog_path,
         PROJECT_ROOT / "assets" / "images" / "items",
     )
     characters = load_characters(
         PROJECT_ROOT / "data" / "characters.json",
         PROJECT_ROOT / "assets" / "images" / "characters",
     )
+    category_filters = load_category_filters(PROJECT_ROOT / "data" / "marketplace_filters.json")
     npc_market_seed = load_npc_market_seed(PROJECT_ROOT / "data" / "npc_market_seed.json")
     items_by_id = {item.id: item for item in item_catalog}
 
@@ -74,11 +77,12 @@ def create_app(settings: Settings | None = None) -> Dash:
     register_navigation(
         app,
         item_catalog,
+        category_filters,
         characters,
         settings.marketplace_poll_interval_ms,
         simulation_settings,
     )
-    register_marketplace_callbacks(app, item_catalog, session_factory, settings)
+    register_marketplace_callbacks(app, item_catalog, category_filters, session_factory, settings)
     register_simulation_callbacks(app, session_factory, item_catalog, settings, scheduler)
     app.server.config["AUCTION_HOUSE_ITEMS"] = item_catalog
     app.server.config["AUCTION_HOUSE_SESSION_FACTORY"] = session_factory
